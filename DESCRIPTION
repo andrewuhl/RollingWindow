@@ -1,0 +1,16 @@
+Package: RollingWindow
+Type: Package
+Title: Calculates single-pass rolling and expanding window statistics
+Version: 0.1
+Date: 2015-11-04
+Author: Andrew Uhl
+Maintainer: Andrew Uhl <auhl.code@gmail.com>
+URL: https://github.com/andrewuhl/RollingWindow
+Description: Efficiently calculates rolling window and expanding window statistics using single-pass algorithms. Current functions include: beta, compounding, covariance, correlation, kurtosis, mean, mean absolute error, mean of squares, mean squared error, median, min, max, product, root mean squared error, skewness, standard deviation, sum, sum product, sum of squares, sum of squared errors, variance, and z score.
+License: MIT + file LICENSE
+Imports:
+    Rcpp (>= 0.12.0)
+Suggests:
+    testthat
+LinkingTo: Rcpp
+RoxygenNote: 5.0.0
