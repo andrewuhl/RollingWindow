@@ -12,7 +12,7 @@ analysis done in the field of quantitative finance, even though the functions im
 # install.packages("devtools") # if not installed
 
 library(devtools)
-install_github("andy3rdworld/RollingWindow")
+install_github("andrewuhl/RollingWindow")
 ```
 
 ## Rolling Window Statistics
