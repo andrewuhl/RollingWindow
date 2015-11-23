@@ -182,20 +182,20 @@ void check_xy1(const NumericVector& x, const NumericVector& y, int window){
 */
 
 // calculates rolling compound (useful for financial asset returns)
-NumericVector rolling_compound(const NumericVector& x, int window, double scale, bool expanding) {
+NumericVector rolling_compound(const NumericVector& x, int window, long double scale, bool expanding) {
   
   check_x1(x, window);
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double prod = 1;
+  long double prod = 1;
   for (int i = 0; i < n; ++i) {
     prod *= 1 + x[i];
     if (i >= window - 1){
       if (expanding) {
-        rollx[i] = pow(prod, scale / (double) (i + 1)) - 1;
+        rollx[i] = pow(prod, scale / (long double) (i + 1)) - 1;
       } else {
-        rollx[i] = pow(prod, scale / (double) window) - 1;
+        rollx[i] = pow(prod, scale / (long double) window) - 1;
         prod /= (1 + x[i - w1]);  
       }
     } else {
@@ -219,10 +219,10 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
   int n_xy = x.length();
   int w = 0;
   int pop_n = pop ? W : W - 1;
-  double avg_x = 0, sumsq_x = 0, delta_x = 0, var_x = 0, sd_x = 0, sum_x = 0;
-  double avg_y = 0, sumsq_y = 0, delta_y = 0, var_y = 0, sd_y = 0, sum_y = 0;
-  double sum_xy = 0;
-  double cov  = 0;
+  long double avg_x = 0, sumsq_x = 0, delta_x = 0, var_x = 0, sd_x = 0, sum_x = 0;
+  long double avg_y = 0, sumsq_y = 0, delta_y = 0, var_y = 0, sd_y = 0, sum_y = 0;
+  long double sum_xy = 0;
+  long double cov  = 0;
   
   NumericVector rollxy(n_xy);
   
@@ -295,8 +295,8 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
   }
   
   // std dev terms
-  double xi_old = x[0], xi = 0, avg_old_x = 0;
-  double yi_old = y[0], yi = 0, avg_old_y = 0;
+  long double xi_old = x[0], xi = 0, avg_old_x = 0;
+  long double yi_old = y[0], yi = 0, avg_old_y = 0;
   
   for (int i = W; i < n_xy; ++i) {
     
@@ -345,7 +345,7 @@ NumericVector rolling_mean(const NumericVector& x, int window, bool expanding) {
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double sum = 0;
+  long double sum = 0;
   for (int i = 0; i < n; ++i) {
     sum += x[i];
     if (i >= window - 1){
@@ -370,7 +370,7 @@ NumericVector rolling_meanabserr(const NumericVector& x, const NumericVector& y,
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double sumabserr = 0;
+  long double sumabserr = 0;
   for (int i = 0; i < n; ++i) {
     sumabserr += std::abs(x[i] - y[i]);
     if (i >= window - 1) {
@@ -437,7 +437,7 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
   NumericVector rollx(n);
   
   if (expanding) {
-    double minmax = x[0];
+    long double minmax = x[0];
     for (int i = 0; i < n; ++i) {
       if (min) {
         if (x[i] < minmax) {
@@ -457,7 +457,7 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
     return rollx;
   }
   
-  std::deque< std::pair<double, int> > deck;
+  std::deque< std::pair<long double, int> > deck;
   for (int i = 0; i < x.size(); ++i) {
     if(min) {
       while (!deck.empty() && deck.back().first >= x[i])
@@ -471,7 +471,7 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
     while(deck.front().second <= i - window)
       deck.pop_front();
     
-    double min = deck.front().first;
+    long double min = deck.front().first;
     if (i < window - 1) {
       rollx[i] = NA_REAL;
     } else {
@@ -488,7 +488,7 @@ NumericVector rolling_prod(const NumericVector& x, int window, bool expanding) {
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double prod = 1;
+  long double prod = 1;
   for (int i = 0; i < n; ++i) {
     prod *= x[i];
     if (i >= window - 1) {
@@ -526,9 +526,9 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
   if (expanding) {
     
     int n = 0;
-    double delta = 0, delta_n = 0, delta_n2 = 0, term1 = 0;
-    double M1 = 0, M2 = 0, M3 = 0, M4 = 0;
-    double pop_skew = 0;
+    long double delta = 0, delta_n = 0, delta_n2 = 0, term1 = 0;
+    long double M1 = 0, M2 = 0, M3 = 0, M4 = 0;
+    long double pop_skew = 0;
     
     for (int i = 0; i < n_x; ++i) {
       
@@ -566,7 +566,7 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
     return rollx;
   } else {
     
-    double pop_skew = 0;
+    long double pop_skew = 0;
     
     // ----------------------------
     // rolling window calculation  
@@ -578,19 +578,19 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
     
     // 2nd moment (M2)
     int n = 0;
-    double avg = 0, delta = 0, M2 = 0;
-    double xi_old = x[0], xi = 0, avg_old = 0;
+    long double avg = 0, delta = 0, M2 = 0;
+    long double xi_old = x[0], xi = 0, avg_old = 0;
     
     // 3rd moment (M3)
-    double sumx = 0, sumx2 = 0, sumx3 = 0, x2 = 0, x2_old;
-    double M3 = 0;
-    double c1_M3 = 3.0 / double(W), c2_M3 = 2.0 / pow(double(W), 2);
+    long double sumx = 0, sumx2 = 0, sumx3 = 0, x2 = 0, x2_old;
+    long double M3 = 0;
+    long double c1_M3 = 3.0 / double(W), c2_M3 = 2.0 / pow(double(W), 2);
     int w1 = W - 1;
     
     // 4th moment (M4)
-    double sumx4 = 0;
-    double M4 = 0;
-    double c1_M4 = 6.0 / pow(double(W), 2), c2_M4 = -4.0 / double(W), c3_M4 = -3.0 / pow(double(W), 3);
+    long double sumx4 = 0;
+    long double M4 = 0;
+    long double c1_M4 = 6.0 / pow(double(W), 2), c2_M4 = -4.0 / double(W), c3_M4 = -3.0 / pow(double(W), 3);
     
     for (int i = 0; i < n_x; ++i) {
       xi     = x[i];
@@ -644,7 +644,7 @@ NumericVector rolling_sum(const NumericVector& x, int window, bool expanding) {
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double sum = 0;
+  long double sum = 0;
   for (int i = 0; i < n; ++i) {
     sum += x[i];
     if (i >= window - 1) {
@@ -665,7 +665,7 @@ NumericVector rolling_sumprod(const NumericVector& x, const NumericVector& y, in
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double sumprod = 0;
+  long double sumprod = 0;
   for (int i = 0; i < n; ++i) {
     sumprod += x[i] * y[i];
     if (i >= window - 1) {
@@ -686,7 +686,7 @@ NumericVector rolling_sumsq(const NumericVector& x, int window, bool expanding, 
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double sumsq = 0;
+  long double sumsq = 0;
   for (int i = 0; i < n; ++i) {
     sumsq += x[i] * x[i];
     if (i >= window - 1) {
@@ -712,7 +712,7 @@ NumericVector rolling_sqerr(const NumericVector& x, const NumericVector& y, int 
   
   int n  = x.length(), w1 = window - 1;
   NumericVector rollx(n);
-  double sumsqerr = 0;
+  long double sumsqerr = 0;
   int k = 0;
   for (int i = 0; i < n; ++i) {
     sumsqerr += x[i]*x[i] - 2*x[i]*y[i] + y[i]*y[i];
@@ -748,7 +748,7 @@ NumericVector rolling_varsdz(const NumericVector& x, int window, bool pop, CalcT
   int n_x = x.length();
   int n = 0;
   int var_n = pop ? W : W - 1;
-  double avg = 0, sumsq = 0, delta = 0, varsd = 0, varsd_tmp = 0;
+  long double avg = 0, sumsq = 0, delta = 0, varsd = 0, varsd_tmp = 0;
   NumericVector rollx(n_x);
   
   if (expanding) {
@@ -786,7 +786,7 @@ NumericVector rolling_varsdz(const NumericVector& x, int window, bool pop, CalcT
   
   rollx[W - 1] = (ctype == ZSCORE) ? (x[W-1] - avg) / varsd_tmp : varsd_tmp;
   
-  double xi_old = x[0], xi = 0, avg_old = 0;
+  long double xi_old = x[0], xi = 0, avg_old = 0;
   
   for (int i = W; i < n_x; ++i) {
     xi = x[i];
@@ -848,7 +848,7 @@ NumericVector RollingBeta(const NumericVector& x, const NumericVector& y, int wi
 //'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
 //'column. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericMatrix RollingCompound(const SEXP& x, int window, double scale = 1.0, bool expanding = false) {
+NumericMatrix RollingCompound(const SEXP& x, int window, long double scale = 1.0, bool expanding = false) {
   NumericMatrix R = as_matrix(x);
   NumericMatrix rollx(R.nrow(), R.ncol());
   for (int i = 0; i < rollx.ncol(); ++i) {

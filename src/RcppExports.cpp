@@ -43,13 +43,13 @@ RcppExport SEXP RollingWindow_RollingBeta(SEXP xSEXP, SEXP ySEXP, SEXP windowSEX
     return __result;
 }
 // RollingCompound
-NumericMatrix RollingCompound(const SEXP& x, int window, double scale, bool expanding);
+NumericMatrix RollingCompound(const SEXP& x, int window, long double scale, bool expanding);
 static SEXP RollingWindow_RollingCompound_try(SEXP xSEXP, SEXP windowSEXP, SEXP scaleSEXP, SEXP expandingSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< double >::type scale(scaleSEXP);
+    Rcpp::traits::input_parameter< long double >::type scale(scaleSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
     __result = Rcpp::wrap(RollingCompound(x, window, scale, expanding));
     return __result;
@@ -735,7 +735,7 @@ static int RollingWindow_RcppExport_validate(const char* sig) {
     static std::set<std::string> signatures;
     if (signatures.empty()) {
         signatures.insert("NumericVector(*RollingBeta)(const NumericVector&,const NumericVector&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingCompound)(const SEXP&,int,double,bool)");
+        signatures.insert("NumericMatrix(*RollingCompound)(const SEXP&,int,long double,bool)");
         signatures.insert("NumericVector(*RollingCov)(const NumericVector&,const NumericVector&,int,bool,bool)");
         signatures.insert("NumericVector(*RollingCorr)(const NumericVector&,const NumericVector&,int,bool,bool)");
         signatures.insert("NumericMatrix(*RollingKurt)(const SEXP&,int,bool,bool)");

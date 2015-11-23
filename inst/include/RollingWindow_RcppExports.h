@@ -43,11 +43,11 @@ namespace RollingWindow {
         return Rcpp::as<NumericVector >(__result);
     }
 
-    inline NumericMatrix RollingCompound(const SEXP& x, int window, double scale = 1.0, bool expanding = false) {
+    inline NumericMatrix RollingCompound(const SEXP& x, int window, long double scale = 1.0, bool expanding = false) {
         typedef SEXP(*Ptr_RollingCompound)(SEXP,SEXP,SEXP,SEXP);
         static Ptr_RollingCompound p_RollingCompound = NULL;
         if (p_RollingCompound == NULL) {
-            validateSignature("NumericMatrix(*RollingCompound)(const SEXP&,int,double,bool)");
+            validateSignature("NumericMatrix(*RollingCompound)(const SEXP&,int,long double,bool)");
             p_RollingCompound = (Ptr_RollingCompound)R_GetCCallable("RollingWindow", "RollingWindow_RollingCompound");
         }
         RObject __result;
