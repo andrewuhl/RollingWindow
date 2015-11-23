@@ -224,7 +224,7 @@ Note that the time unit of the result is _microseconds_. If we look at the media
 
 ## Benchmarks - All RollingWindow functions
 
-Continuing with the same benchmark setup, the runtimes for all of RollingWindow packages function are see below.
+Continuing with the same benchmark setup, the runtimes for all of RollingWindow packages function are seen below.
 
 ```R
 Unit: microseconds
