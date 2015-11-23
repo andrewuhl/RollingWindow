@@ -522,13 +522,13 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
   int W = window;
   int n_x = x.length();
   NumericVector rollx(n_x);
-  double pop_skew = 0, pop_kurt1 = 1, pop_kurt2 = 3;
   
   if (expanding) {
     
     int n = 0;
     double delta = 0, delta_n = 0, delta_n2 = 0, term1 = 0;
     double M1 = 0, M2 = 0, M3 = 0, M4 = 0;
+    double pop_skew = 0;
     
     for (int i = 0; i < n_x; ++i) {
       
@@ -564,79 +564,77 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
       }
     }
     return rollx;
-  }
-  
-  // ----------------------------
-  // rolling window calculation  
-  // ----------------------------
-  
-  if (ctype == SKEW) {
-    pop_skew = pop ? double(W)*sqrt(double(W)-1)/(double(W)-2): sqrt(double(W));
-  } else if (ctype == KURT) {
-    if (pop) {
-      pop_kurt1 = (W+1)*W/((W-1)*(W-2)*(W-3));
-      pop_kurt2 = 3*((W-1)^2)/((W-2)*(W-3));
-    }
-  }
-  
-  // 2nd moment (M2)
-  int n = 0;
-  int var_n = pop ? W : W - 1;
-  double avg = 0, sumsq = 0, delta = 0, M2 = 0;
-  double xi_old = x[0], xi = 0, avg_old = 0;
-  
-  // 3rd moment (M3)
-  double sumx = 0, sumx2 = 0, sumx3 = 0, x2 = 0, x2_old;
-  double M3 = 0;
-  double c1_M3 = 3.0 / double(W), c2_M3 = 2.0 / pow(double(W), 2);
-  int w1 = W - 1;
-  
-  // 4th moment (M4)
-  double sumx4 = 0;
-  double M4 = 0;
-  double c1_M4 = 6.0 / pow(double(W), 2), c2_M4 = -4.0 / double(W), c3_M4 = -3.0 / pow(double(W), 3);
-  
-  for (int i = 0; i < n_x; ++i) {
-    xi     = x[i];
-    x2     = xi*xi;
-    sumx  += xi;
-    sumx2 += x2;
-    sumx3 += x2*xi;
-    sumx4 += x2*x2;
+  } else {
     
-    if (i < W) {
-      ++n;
-      delta = xi - avg;
-      avg += delta / n;
-      M2 += delta * (xi - avg);
-      rollx[i] = NA_REAL;
-    } else {
-      avg_old = avg;
-      avg = avg_old + (xi - xi_old) / W;
-      M2 += (xi - xi_old)*(xi - avg + xi_old - avg_old);
+    double pop_skew = 0;
+    
+    // ----------------------------
+    // rolling window calculation  
+    // ----------------------------
+    
+    if (ctype == SKEW) {
+      pop_skew = pop ? double(W)*sqrt(double(W)-1)/(double(W)-2): sqrt(double(W));
     }
-    if (i >= W - 1) {
-      xi_old   = x[i - w1];
+    
+    // 2nd moment (M2)
+    int n = 0;
+    double avg = 0, delta = 0, M2 = 0;
+    double xi_old = x[0], xi = 0, avg_old = 0;
+    
+    // 3rd moment (M3)
+    double sumx = 0, sumx2 = 0, sumx3 = 0, x2 = 0, x2_old;
+    double M3 = 0;
+    double c1_M3 = 3.0 / double(W), c2_M3 = 2.0 / pow(double(W), 2);
+    int w1 = W - 1;
+    
+    // 4th moment (M4)
+    double sumx4 = 0;
+    double M4 = 0;
+    double c1_M4 = 6.0 / pow(double(W), 2), c2_M4 = -4.0 / double(W), c3_M4 = -3.0 / pow(double(W), 3);
+    
+    for (int i = 0; i < n_x; ++i) {
+      xi     = x[i];
+      x2     = xi*xi;
+      sumx  += xi;
+      sumx2 += x2;
+      sumx3 += x2*xi;
+      sumx4 += x2*x2;
       
-      if (ctype == SKEW) {
-        M3 = sumx3 - c1_M3*sumx*sumx2 + c2_M3*pow(sumx, 3);
-        rollx[i] = pop_skew * M3 / pow(M2, 1.5);  
-      } else if (ctype == KURT) {        
-        M4 = sumx4 + sumx*(c1_M4*sumx*sumx2 + c2_M4*sumx3 + c3_M4*pow(sumx, 3));
-        rollx[i] = W*M4 / (M2*M2) - 3;
-        if (!pop) {
-          rollx[i] = ((W+1)*rollx[i] + 6) * (W-1)/((W-2)*(W-3));
-        }
+      if (i < W) {
+        ++n;
+        delta = xi - avg;
+        avg += delta / n;
+        M2 += delta * (xi - avg);
+        rollx[i] = NA_REAL;
+      } else {
+        avg_old = avg;
+        avg = avg_old + (xi - xi_old) / W;
+        M2 += (xi - xi_old)*(xi - avg + xi_old - avg_old);
       }
-      
-      x2_old   = xi_old*xi_old;
-      sumx    -= xi_old;
-      sumx2   -= x2_old;
-      sumx3   -= x2_old*xi_old;
-      sumx4   -= x2_old*x2_old;
+      if (i >= W - 1) {
+        xi_old   = x[i - w1];
+        
+        if (ctype == SKEW) {
+          M3 = sumx3 - c1_M3*sumx*sumx2 + c2_M3*pow(sumx, 3);
+          rollx[i] = pop_skew * M3 / pow(M2, 1.5);  
+        } else if (ctype == KURT) {        
+          M4 = sumx4 + sumx*(c1_M4*sumx*sumx2 + c2_M4*sumx3 + c3_M4*pow(sumx, 3));
+          rollx[i] = W*M4 / (M2*M2) - 3;
+          if (!pop) {
+            rollx[i] = ((W+1)*rollx[i] + 6) * (W-1)/((W-2)*(W-3));
+          }
+        }
+        
+        x2_old   = xi_old*xi_old;
+        sumx    -= xi_old;
+        sumx2   -= x2_old;
+        sumx3   -= x2_old*xi_old;
+        sumx4   -= x2_old*x2_old;
+      }
     }
+    return rollx;
+    
   }
-  return rollx;
 }
 
 // calculates rolling sum

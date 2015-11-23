@@ -2,7 +2,7 @@
 library(testthat)
 library(RollingWindow)
 
-test_that("we act like manually calculated rolling windows", {
+test_that("we match rolling windows calcuated using R code", {
   
   TRACE = FALSE
   ZAP_DIGITS = 20
