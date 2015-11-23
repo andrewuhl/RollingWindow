@@ -149,8 +149,8 @@ runs 121X faster than RcppRoll's roll_sd() function.
 
 | test | replications | elapsed | relative | user.self |
 | ---- | ------------: | -------: | --------: | ---------: |
-| RollingMean | 10 | 0.005 | **1.0** | 0.005 |
-| roll_mean | 10 | 0.546 | 109.2 | 0.547 |
+| RollingMax | 10 | 0.005 | **1.0** | 0.005 |
+| roll_max | 10 | 0.546 | 109.2 | 0.547 |
 
 ### Mean
 
