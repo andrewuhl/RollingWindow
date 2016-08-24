@@ -4,27 +4,28 @@
 \alias{RollingStd}
 \title{Calculates the standard deviation over a rolling window}
 \usage{
-RollingStd(x, window, pop = FALSE, expanding = FALSE)
+RollingStd(x, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
-
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
 }
 \value{
 A matrix; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
-Sample standard deviation (see parameter \code{pop}) is defined as
-\deqn{ \code{Std} = \sqrt{\frac{1}{n-1}\sum^n_{i=1}(x_i - \bar{x})^2} }
+Calculates the standard deviation over a rolling window
 }
 \details{
-If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-column. The dimensions of the return value will be the same as input \code{x}.
+Sample standard deviation (see parameter \code{pop}) is defined as
+\deqn{ \code{Std} = \sqrt{\frac{1}{n-1}\sum^n_{i=1}(x_i - \bar{x})^2} }
 }
 

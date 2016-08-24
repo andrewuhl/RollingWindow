@@ -8,25 +8,59 @@
 
 using namespace Rcpp;
 
-// RollingBeta
-NumericVector RollingBeta(const NumericVector& x, const NumericVector& y, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingBeta_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+// NaSub
+NumericMatrix NaSub(const SEXP& x, double repl, bool last_obs, int maxgap);
+static SEXP RollingWindow_NaSub_try(SEXP xSEXP, SEXP replSEXP, SEXP last_obsSEXP, SEXP maxgapSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
-    Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingBeta(x, y, window, pop, expanding));
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type repl(replSEXP);
+    Rcpp::traits::input_parameter< bool >::type last_obs(last_obsSEXP);
+    Rcpp::traits::input_parameter< int >::type maxgap(maxgapSEXP);
+    __result = Rcpp::wrap(NaSub(x, repl, last_obs, maxgap));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingBeta(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_NaSub(SEXP xSEXP, SEXP replSEXP, SEXP last_obsSEXP, SEXP maxgapSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingBeta_try(xSEXP, ySEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_NaSub_try(xSEXP, replSEXP, last_obsSEXP, maxgapSEXP));
+    }
+    Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
+    if (__isInterrupt) {
+        UNPROTECT(1);
+        Rf_onintr();
+    }
+    Rboolean __isError = Rf_inherits(__result, "try-error");
+    if (__isError) {
+        SEXP __msgSEXP = Rf_asChar(__result);
+        UNPROTECT(1);
+        Rf_error(CHAR(__msgSEXP));
+    }
+    UNPROTECT(1);
+    return __result;
+}
+// RollingBeta
+NumericVector RollingBeta(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingBeta_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type window(windowSEXP);
+    Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingBeta(x, y, window, expanding, na_rm, pop));
+    return __result;
+END_RCPP_RETURN_ERROR
+}
+RcppExport SEXP RollingWindow_RollingBeta(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
+    SEXP __result;
+    {
+        Rcpp::RNGScope __rngScope;
+        __result = PROTECT(RollingWindow_RollingBeta_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -43,23 +77,24 @@ RcppExport SEXP RollingWindow_RollingBeta(SEXP xSEXP, SEXP ySEXP, SEXP windowSEX
     return __result;
 }
 // RollingCompound
-NumericMatrix RollingCompound(const SEXP& x, int window, long double scale, bool expanding);
-static SEXP RollingWindow_RollingCompound_try(SEXP xSEXP, SEXP windowSEXP, SEXP scaleSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingCompound(const SEXP& x, int window, long double scale, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingCompound_try(SEXP xSEXP, SEXP windowSEXP, SEXP scaleSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< long double >::type scale(scaleSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingCompound(x, window, scale, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingCompound(x, window, scale, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingCompound(SEXP xSEXP, SEXP windowSEXP, SEXP scaleSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingCompound(SEXP xSEXP, SEXP windowSEXP, SEXP scaleSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingCompound_try(xSEXP, windowSEXP, scaleSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingCompound_try(xSEXP, windowSEXP, scaleSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -76,24 +111,25 @@ RcppExport SEXP RollingWindow_RollingCompound(SEXP xSEXP, SEXP windowSEXP, SEXP 
     return __result;
 }
 // RollingCov
-NumericVector RollingCov(const NumericVector& x, const NumericVector& y, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingCov_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericVector RollingCov(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingCov_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingCov(x, y, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingCov(x, y, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingCov(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingCov(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingCov_try(xSEXP, ySEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingCov_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -110,24 +146,25 @@ RcppExport SEXP RollingWindow_RollingCov(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP
     return __result;
 }
 // RollingCorr
-NumericVector RollingCorr(const NumericVector& x, const NumericVector& y, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingCorr_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericVector RollingCorr(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingCorr_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingCorr(x, y, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingCorr(x, y, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingCorr(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingCorr(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingCorr_try(xSEXP, ySEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingCorr_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -144,23 +181,24 @@ RcppExport SEXP RollingWindow_RollingCorr(SEXP xSEXP, SEXP ySEXP, SEXP windowSEX
     return __result;
 }
 // RollingKurt
-NumericMatrix RollingKurt(const SEXP& x, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingKurt_try(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingKurt(const SEXP& x, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingKurt_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingKurt(x, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingKurt(x, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingKurt(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingKurt(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingKurt_try(xSEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingKurt_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -177,22 +215,23 @@ RcppExport SEXP RollingWindow_RollingKurt(SEXP xSEXP, SEXP windowSEXP, SEXP popS
     return __result;
 }
 // RollingMax
-NumericMatrix RollingMax(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingMax_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingMax(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMax_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMax(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMax(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMax(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMax(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMax_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMax_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -209,22 +248,23 @@ RcppExport SEXP RollingWindow_RollingMax(SEXP xSEXP, SEXP windowSEXP, SEXP expan
     return __result;
 }
 // RollingMean
-NumericMatrix RollingMean(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingMean_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingMean(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMean_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMean(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMean(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMean(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMean(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMean_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMean_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -241,23 +281,24 @@ RcppExport SEXP RollingWindow_RollingMean(SEXP xSEXP, SEXP windowSEXP, SEXP expa
     return __result;
 }
 // RollingMAE
-NumericVector RollingMAE(const NumericVector& x, const NumericVector& y, int window, bool expanding);
-static SEXP RollingWindow_RollingMAE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericVector RollingMAE(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMAE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMAE(x, y, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMAE(x, y, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMAE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMAE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMAE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMAE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -274,22 +315,23 @@ RcppExport SEXP RollingWindow_RollingMAE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP
     return __result;
 }
 // RollingMS
-NumericVector RollingMS(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingMS_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericVector RollingMS(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMS_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMS(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMS(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMS(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMS(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMS_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMS_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -306,23 +348,24 @@ RcppExport SEXP RollingWindow_RollingMS(SEXP xSEXP, SEXP windowSEXP, SEXP expand
     return __result;
 }
 // RollingMSE
-NumericVector RollingMSE(const NumericVector& x, const NumericVector& y, int window, bool expanding);
-static SEXP RollingWindow_RollingMSE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericVector RollingMSE(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMSE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMSE(x, y, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMSE(x, y, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMSE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMSE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -339,22 +382,23 @@ RcppExport SEXP RollingWindow_RollingMSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP
     return __result;
 }
 // RollingMedian
-NumericMatrix RollingMedian(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingMedian_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingMedian(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMedian_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMedian(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMedian(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMedian(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMedian(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMedian_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMedian_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -371,22 +415,23 @@ RcppExport SEXP RollingWindow_RollingMedian(SEXP xSEXP, SEXP windowSEXP, SEXP ex
     return __result;
 }
 // RollingMin
-NumericMatrix RollingMin(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingMin_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingMin(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingMin_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingMin(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingMin(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingMin(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingMin(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingMin_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingMin_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -403,22 +448,23 @@ RcppExport SEXP RollingWindow_RollingMin(SEXP xSEXP, SEXP windowSEXP, SEXP expan
     return __result;
 }
 // RollingProd
-NumericMatrix RollingProd(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingProd_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingProd(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingProd_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingProd(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingProd(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingProd(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingProd(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingProd_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingProd_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -435,23 +481,24 @@ RcppExport SEXP RollingWindow_RollingProd(SEXP xSEXP, SEXP windowSEXP, SEXP expa
     return __result;
 }
 // RollingRMSE
-NumericVector RollingRMSE(const NumericVector& x, const NumericVector& y, int window, bool expanding);
-static SEXP RollingWindow_RollingRMSE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericVector RollingRMSE(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingRMSE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingRMSE(x, y, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingRMSE(x, y, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingRMSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingRMSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingRMSE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingRMSE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -468,23 +515,24 @@ RcppExport SEXP RollingWindow_RollingRMSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEX
     return __result;
 }
 // RollingSkew
-NumericMatrix RollingSkew(const SEXP& x, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingSkew_try(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingSkew(const SEXP& x, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingSkew_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingSkew(x, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingSkew(x, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingSkew(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingSkew(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingSkew_try(xSEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingSkew_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -501,23 +549,24 @@ RcppExport SEXP RollingWindow_RollingSkew(SEXP xSEXP, SEXP windowSEXP, SEXP popS
     return __result;
 }
 // RollingStd
-NumericMatrix RollingStd(const SEXP& x, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingStd_try(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingStd(const SEXP& x, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingStd_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingStd(x, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingStd(x, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingStd(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingStd(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingStd_try(xSEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingStd_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -534,22 +583,23 @@ RcppExport SEXP RollingWindow_RollingStd(SEXP xSEXP, SEXP windowSEXP, SEXP popSE
     return __result;
 }
 // RollingSum
-NumericMatrix RollingSum(const SEXP& x, int window, bool expanding);
-static SEXP RollingWindow_RollingSum_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingSum(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingSum_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingSum(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingSum(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingSum(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingSum(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingSum_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingSum_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -566,23 +616,24 @@ RcppExport SEXP RollingWindow_RollingSum(SEXP xSEXP, SEXP windowSEXP, SEXP expan
     return __result;
 }
 // RollingSumprod
-NumericVector RollingSumprod(const NumericVector& x, const NumericVector& y, int window, bool expanding);
-static SEXP RollingWindow_RollingSumprod_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericVector RollingSumprod(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingSumprod_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingSumprod(x, y, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingSumprod(x, y, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingSumprod(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingSumprod(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingSumprod_try(xSEXP, ySEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingSumprod_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -599,22 +650,23 @@ RcppExport SEXP RollingWindow_RollingSumprod(SEXP xSEXP, SEXP ySEXP, SEXP window
     return __result;
 }
 // RollingSS
-NumericVector RollingSS(const NumericVector& x, int window, bool expanding);
-static SEXP RollingWindow_RollingSS_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericVector RollingSS(const SEXP& x, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingSS_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingSS(x, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingSS(x, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingSS(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingSS(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingSS_try(xSEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingSS_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -631,23 +683,24 @@ RcppExport SEXP RollingWindow_RollingSS(SEXP xSEXP, SEXP windowSEXP, SEXP expand
     return __result;
 }
 // RollingSSE
-NumericVector RollingSSE(const NumericVector& x, const NumericVector& y, int window, bool expanding);
-static SEXP RollingWindow_RollingSSE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingSSE(const SEXP& x, const SEXP& y, int window, bool expanding, bool na_rm);
+static SEXP RollingWindow_RollingSSE_try(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
-    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingSSE(x, y, window, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    __result = Rcpp::wrap(RollingSSE(x, y, window, expanding, na_rm));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingSSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingSSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingSSE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingSSE_try(xSEXP, ySEXP, windowSEXP, expandingSEXP, na_rmSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -664,23 +717,24 @@ RcppExport SEXP RollingWindow_RollingSSE(SEXP xSEXP, SEXP ySEXP, SEXP windowSEXP
     return __result;
 }
 // RollingVar
-NumericMatrix RollingVar(const SEXP& x, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingVar_try(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingVar(const SEXP& x, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingVar_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingVar(x, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingVar(x, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingVar(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingVar(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingVar_try(xSEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingVar_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -697,23 +751,24 @@ RcppExport SEXP RollingWindow_RollingVar(SEXP xSEXP, SEXP windowSEXP, SEXP popSE
     return __result;
 }
 // RollingZscore
-NumericMatrix RollingZscore(const SEXP& x, int window, bool pop, bool expanding);
-static SEXP RollingWindow_RollingZscore_try(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+NumericMatrix RollingZscore(const SEXP& x, int window, bool expanding, bool na_rm, bool pop);
+static SEXP RollingWindow_RollingZscore_try(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::traits::input_parameter< const SEXP& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type window(windowSEXP);
-    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
     Rcpp::traits::input_parameter< bool >::type expanding(expandingSEXP);
-    __result = Rcpp::wrap(RollingZscore(x, window, pop, expanding));
+    Rcpp::traits::input_parameter< bool >::type na_rm(na_rmSEXP);
+    Rcpp::traits::input_parameter< bool >::type pop(popSEXP);
+    __result = Rcpp::wrap(RollingZscore(x, window, expanding, na_rm, pop));
     return __result;
 END_RCPP_RETURN_ERROR
 }
-RcppExport SEXP RollingWindow_RollingZscore(SEXP xSEXP, SEXP windowSEXP, SEXP popSEXP, SEXP expandingSEXP) {
+RcppExport SEXP RollingWindow_RollingZscore(SEXP xSEXP, SEXP windowSEXP, SEXP expandingSEXP, SEXP na_rmSEXP, SEXP popSEXP) {
     SEXP __result;
     {
         Rcpp::RNGScope __rngScope;
-        __result = PROTECT(RollingWindow_RollingZscore_try(xSEXP, windowSEXP, popSEXP, expandingSEXP));
+        __result = PROTECT(RollingWindow_RollingZscore_try(xSEXP, windowSEXP, expandingSEXP, na_rmSEXP, popSEXP));
     }
     Rboolean __isInterrupt = Rf_inherits(__result, "interrupted-error");
     if (__isInterrupt) {
@@ -734,34 +789,36 @@ RcppExport SEXP RollingWindow_RollingZscore(SEXP xSEXP, SEXP windowSEXP, SEXP po
 static int RollingWindow_RcppExport_validate(const char* sig) { 
     static std::set<std::string> signatures;
     if (signatures.empty()) {
-        signatures.insert("NumericVector(*RollingBeta)(const NumericVector&,const NumericVector&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingCompound)(const SEXP&,int,long double,bool)");
-        signatures.insert("NumericVector(*RollingCov)(const NumericVector&,const NumericVector&,int,bool,bool)");
-        signatures.insert("NumericVector(*RollingCorr)(const NumericVector&,const NumericVector&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingKurt)(const SEXP&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingMax)(const SEXP&,int,bool)");
-        signatures.insert("NumericMatrix(*RollingMean)(const SEXP&,int,bool)");
-        signatures.insert("NumericVector(*RollingMAE)(const NumericVector&,const NumericVector&,int,bool)");
-        signatures.insert("NumericVector(*RollingMS)(const SEXP&,int,bool)");
-        signatures.insert("NumericVector(*RollingMSE)(const NumericVector&,const NumericVector&,int,bool)");
-        signatures.insert("NumericMatrix(*RollingMedian)(const SEXP&,int,bool)");
-        signatures.insert("NumericMatrix(*RollingMin)(const SEXP&,int,bool)");
-        signatures.insert("NumericMatrix(*RollingProd)(const SEXP&,int,bool)");
-        signatures.insert("NumericVector(*RollingRMSE)(const NumericVector&,const NumericVector&,int,bool)");
-        signatures.insert("NumericMatrix(*RollingSkew)(const SEXP&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingStd)(const SEXP&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingSum)(const SEXP&,int,bool)");
-        signatures.insert("NumericVector(*RollingSumprod)(const NumericVector&,const NumericVector&,int,bool)");
-        signatures.insert("NumericVector(*RollingSS)(const NumericVector&,int,bool)");
-        signatures.insert("NumericVector(*RollingSSE)(const NumericVector&,const NumericVector&,int,bool)");
-        signatures.insert("NumericMatrix(*RollingVar)(const SEXP&,int,bool,bool)");
-        signatures.insert("NumericMatrix(*RollingZscore)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*NaSub)(const SEXP&,double,bool,int)");
+        signatures.insert("NumericVector(*RollingBeta)(const SEXP&,const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingCompound)(const SEXP&,int,long double,bool,bool)");
+        signatures.insert("NumericVector(*RollingCov)(const SEXP&,const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericVector(*RollingCorr)(const SEXP&,const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingKurt)(const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingMax)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingMean)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericVector(*RollingMAE)(const SEXP&,const SEXP&,int,bool,bool)");
+        signatures.insert("NumericVector(*RollingMS)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericVector(*RollingMSE)(const SEXP&,const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingMedian)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingMin)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingProd)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericVector(*RollingRMSE)(const SEXP&,const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingSkew)(const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingStd)(const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingSum)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericVector(*RollingSumprod)(const SEXP&,const SEXP&,int,bool,bool)");
+        signatures.insert("NumericVector(*RollingSS)(const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingSSE)(const SEXP&,const SEXP&,int,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingVar)(const SEXP&,int,bool,bool,bool)");
+        signatures.insert("NumericMatrix(*RollingZscore)(const SEXP&,int,bool,bool,bool)");
     }
     return signatures.find(sig) != signatures.end();
 }
 
 // registerCCallable (register entry points for exported C++ functions)
 RcppExport SEXP RollingWindow_RcppExport_registerCCallable() { 
+    R_RegisterCCallable("RollingWindow", "RollingWindow_NaSub", (DL_FUNC)RollingWindow_NaSub_try);
     R_RegisterCCallable("RollingWindow", "RollingWindow_RollingBeta", (DL_FUNC)RollingWindow_RollingBeta_try);
     R_RegisterCCallable("RollingWindow", "RollingWindow_RollingCompound", (DL_FUNC)RollingWindow_RollingCompound_try);
     R_RegisterCCallable("RollingWindow", "RollingWindow_RollingCov", (DL_FUNC)RollingWindow_RollingCov_try);

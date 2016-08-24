@@ -4,22 +4,27 @@
 \alias{RollingSumprod}
 \title{Calculates the sum product (dot product) over a rolling window}
 \usage{
-RollingSumprod(x, y, window, expanding = FALSE)
+RollingSumprod(x, y, window, expanding = FALSE, na_rm = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
-\item{y}{A vector or single-column matrix}
+\item{y}{A vector, matrix, list or other object coercible to a vector}
 
 \item{window}{The size of the rolling window}
 
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the sum product (dot product) over a rolling window
+}
+\details{
 Sum product is defined as
 \deqn{ \code{Sumprod} = \sum^n_{i=1} x_i y_i }
 }

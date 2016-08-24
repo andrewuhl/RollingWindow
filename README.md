@@ -220,7 +220,7 @@ Unit: microseconds
  RollingMedian   1783.405   1795.463   1845.6817   1851.4000   1885.285   1935.361    10
    roll_median 634023.656 635203.964 637219.3584 636503.7700 640487.120 641341.506    10
 ```
-Note that the time unit of the result is _microseconds_. If we look at the median, RollingMedian's mean runtime is 1.8 milliseconds, vs roll_median's mean runtime of 637 milliseconds. While both are fast in the absolute, it is easy to imagine having to run the analysis on several thousand time series with, e.g. daily data. Suppose in a financial application, 2,000 stocks with decades of daily data had to be analyzed. RollingMedian would complete in less than 4 seconds, while roll_median would take 21 minutes. Trying to calculate the same using pure [R] code would be _much_ slower still.
+Note that the time unit of the result is _microseconds_. If we look at the median, RollingMedian's mean runtime is 1.8 milliseconds, vs roll\_median's mean runtime of 637 milliseconds. While both are fast in the absolute, it is easy to imagine having to run the analysis on several thousand time series with, e.g. daily data. Suppose in a financial application, 2,000 stocks with decades of daily data had to be analyzed. RollingMedian would complete in less than 4 seconds, while roll\_median would take 21 minutes. Trying to calculate the same using pure [R] code would be _much_ slower still.
 
 ## Benchmarks - All RollingWindow functions
 

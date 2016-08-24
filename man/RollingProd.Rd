@@ -4,7 +4,7 @@
 \alias{RollingProd}
 \title{Calculates the product over a rolling window}
 \usage{
-RollingProd(x, window, expanding = FALSE)
+RollingProd(x, window, expanding = FALSE, na_rm = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
@@ -13,16 +13,17 @@ RollingProd(x, window, expanding = FALSE)
 
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
 }
 \value{
 A matrix; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
-Product is defined as
-\deqn{ \code{Prod} = \prod^n_{i=1} x_i }
+Calculates the product over a rolling window
 }
 \details{
-If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-column. The dimensions of the return value will be the same as input \code{x}.
+Product is defined as
+\deqn{ \code{Prod} = \prod^n_{i=1} x_i }
 }
 

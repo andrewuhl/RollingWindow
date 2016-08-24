@@ -4,20 +4,25 @@
 \alias{RollingMS}
 \title{Calculates the mean of squares over a rolling window}
 \usage{
-RollingMS(x, window, expanding = FALSE)
+RollingMS(x, window, expanding = FALSE, na_rm = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
 \item{window}{The size of the rolling window}
 
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the mean of squares over a rolling window
+}
+\details{
 Mean of squares is defined as
 \deqn{ \code{MS} = \frac{1}{n}\sum^n_{i=1} x^2_i }
 }

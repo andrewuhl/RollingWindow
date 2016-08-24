@@ -4,29 +4,30 @@
 \alias{RollingKurt}
 \title{Calculates the excess kurtosis over a rolling window}
 \usage{
-RollingKurt(x, window, pop = FALSE, expanding = FALSE)
+RollingKurt(x, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
-
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
 }
 \value{
 A matrix; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the excess kurtosis over a rolling window
+}
+\details{
 Population excess skewness (see parameter \code{pop}) is defined as
 \deqn{ \code{Kurt} = \frac{\frac{1}{n}\sum^n_{i=1}(x_i-\bar{x})^4}{\big(\frac{1}{n}\sum^n_{i=1}(x_i-\bar{x})^2\big)^2} - 3}
 Sample excess kurtosis (see parameter \code{pop}) is defined as
 \deqn{ \code{Kurt} = \frac{n(n+1)}{(n-1)(n-2)(n-3)}\frac{\sum^n_{i=1}(x_i-\bar{x})^4}{\big(\sum^n_{i=1}(x_i-\bar{x})^2\big)^2} -3 \frac{(n-1)^2}{(n-2)(n-3)} }
-}
-\details{
-If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-column. The dimensions of the return value will be the same as input \code{x}.
 }
 

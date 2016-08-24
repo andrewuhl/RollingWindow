@@ -4,28 +4,29 @@
 \alias{RollingZscore}
 \title{Calculates the z-score (standardized value) over a rolling window}
 \usage{
-RollingZscore(x, window, pop = FALSE, expanding = FALSE)
+RollingZscore(x, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) standard deviation, FALSE to calculate sample (n-1) standard deviation}
-
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) standard deviation, FALSE to calculate sample (n-1) standard deviation}
 }
 \value{
 A matrix; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the z-score (standardized value) over a rolling window
+}
+\details{
 z-score is defined as
 \deqn{ \code{Zscore} = \frac{x - \bar{x}}{\sigma} }
 where \eqn{\sigma} is the standard deviation of x.
-}
-\details{
-If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-column. The dimensions of the return value will be the same as input \code{x}.
 }
 

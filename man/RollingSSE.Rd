@@ -4,22 +4,27 @@
 \alias{RollingSSE}
 \title{Calculates the sum of squared errors over a rolling window}
 \usage{
-RollingSSE(x, y, window, expanding = FALSE)
+RollingSSE(x, y, window, expanding = FALSE, na_rm = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
-\item{y}{A vector or single-column matrix; the error to be subtracted from x}
+\item{y}{A vector, matrix, list or other object coercible to a vector; the error to be subtracted from x}
 
 \item{window}{The size of the rolling window}
 
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the sum of squared errors over a rolling window
+}
+\details{
 Sum of squared errors is defined as
 \deqn{ \code{SSE} = \sum^n_{i=1}(x_i - y_i)^2 }
 where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.

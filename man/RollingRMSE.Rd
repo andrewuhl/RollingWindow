@@ -4,22 +4,27 @@
 \alias{RollingRMSE}
 \title{Calculates the root mean squared error over a rolling window}
 \usage{
-RollingRMSE(x, y, window, expanding = FALSE)
+RollingRMSE(x, y, window, expanding = FALSE, na_rm = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
-\item{y}{A vector or single-column matrix; the error to be subtracted from x}
+\item{y}{A vector, matrix, list or other object coercible to a vector; the error to be subtracted from x}
 
 \item{window}{The size of the rolling window}
 
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the root mean squared error over a rolling window
+}
+\details{
 Root mean squared error is defined as
 \deqn{ \code{RMSE} = \sqrt{\frac{1}{n}\sum^n_{i=1}(x_i - y_i)^2 } }
 where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.

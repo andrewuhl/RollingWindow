@@ -4,29 +4,30 @@
 \alias{RollingSkew}
 \title{Calculates the skewness over a rolling window}
 \usage{
-RollingSkew(x, window, pop = FALSE, expanding = FALSE)
+RollingSkew(x, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
-
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
 }
 \value{
 A matrix; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the skewness over a rolling window
+}
+\details{
 Population skewness (see parameter \code{pop}) is defined as
 \deqn{ \code{Skew} = \sqrt{n}\frac{\sum^n_{i=1}(x_i-\bar{x})^3}{\big(\sum^n_{i=1}(x_i-\bar{x})^2\big)^{3/2}}}
 Sample skewness (see parameter \code{pop}) is defined as
 \deqn{ \code{Skew} = \frac{n\sqrt{n-1}}{n-2}\frac{\sum^n_{i=1}(x_i-\bar{x})^3}{\big(\sum^n_{i=1}(x_i-\bar{x})^2\big)^{3/2}}}
-}
-\details{
-If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-column. The dimensions of the return value will be the same as input \code{x}.
 }
 

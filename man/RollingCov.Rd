@@ -4,24 +4,29 @@
 \alias{RollingCov}
 \title{Calculates covariance over a rolling window}
 \usage{
-RollingCov(x, y, window, pop = FALSE, expanding = FALSE)
+RollingCov(x, y, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
-\item{y}{A vector or single-column matrix}
+\item{y}{A vector, matrix, list or other object coercible to a vector}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance}
-
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates covariance over a rolling window
+}
+\details{
 Sample covariance (see parameter \code{pop}) is defined as
 \deqn{ \code{Cov} = \frac{1}{n-1} \sum^n_{i=1} (x_i - \bar{x})(y_i - \bar{y}) }
 }

@@ -4,10 +4,10 @@
 \alias{RollingMSE}
 \title{Calculates the mean squared error over a rolling window}
 \usage{
-RollingMSE(x, y, window, expanding = FALSE)
+RollingMSE(x, y, window, expanding = FALSE, na_rm = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
 \item{y}{A vector or single-column matrix; the error to be subtracted from x}
 
@@ -15,11 +15,16 @@ RollingMSE(x, y, window, expanding = FALSE)
 
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates the mean squared error over a rolling window
+}
+\details{
 Mean squared error is defined as
 \deqn{ \code{MSE} = \frac{1}{n}\sum^n_{i=1}(x_i - y_i)^2 }
 where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.

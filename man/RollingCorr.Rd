@@ -4,24 +4,29 @@
 \alias{RollingCorr}
 \title{Calculates Pearson correlation over a rolling window}
 \usage{
-RollingCorr(x, y, window, pop = FALSE, expanding = FALSE)
+RollingCorr(x, y, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix}
+\item{x}{A vector, matrix, list or other object coercible to a matrix}
 
-\item{y}{A vector or single-column matrix}
+\item{y}{A vector, matrix, list or other object coercible to a vector}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) std. deviation, FALSE to calculate sample (n-1) std. deviation}
+\item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window}
 
-\item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) std. deviation, FALSE to calculate sample (n-1) std. deviation
 determines the starting number of observations used to calculate the statistic}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
+Calculates Pearson correlation over a rolling window
+}
+\details{
 Correlation is defined as
 \deqn{ \code{Corr} = \frac{cov(x, y)}{\sigma_x\sigma_y} }
 where \eqn{cov} is the covariance and \eqn{\sigma} is the standard deviation

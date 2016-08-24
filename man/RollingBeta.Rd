@@ -4,27 +4,34 @@
 \alias{RollingBeta}
 \title{Estimates the coefficient (beta) from a univariate linear model y ~ x over a rolling window}
 \usage{
-RollingBeta(x, y, window, pop = FALSE, expanding = FALSE)
+RollingBeta(x, y, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 }
 \arguments{
-\item{x}{A vector or single-column matrix; the independent variable}
+\item{x}{A vector, matrix, list or other object coercible to a matrix; the independent variable}
 
-\item{y}{A vector or single-column matrix; the dependent variable}
+\item{y}{A vector, matrix, list or other object coercible to a vector; the dependent variable}
 
 \item{window}{The size of the rolling window}
 
-\item{pop}{TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance}
-
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
-determines the starting number of observations used to calculate the statistic}
+determines the starting number of observations used to calculate the statistic//'}
+
+\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+
+\item{pop}{TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.
 }
 \description{
-Estimates \eqn{\hat{\beta_1}} from a ordinary least squares model \eqn{y = \beta_0 + \beta_1 x}.
+Estimates the coefficient (beta) from a univariate linear model y ~ x over a rolling window
+}
+\details{
+Estimates \eqn{\hat{\beta_1}} from an ordinary least squares model \eqn{y = \beta_0 + \beta_1 x}.
 Beta is defined as
 \deqn{ \code{Beta} = \frac{cov(x, y)}{\sigma^2_x} }
 where \eqn{cov} is covariance and \eqn{\sigma^2} is variance.
+If input \code{x} contains more than one column, the rolling window calculation will be performed on each
+column against the vector \code{y}. The dimensions of the return value will be the same as input \code{x}.
 }
 

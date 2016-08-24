@@ -28,6 +28,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <deque>
 #include <queue>
 #include <cmath>
+//#include <functional>
 
 #include <Rcpp.h>
 #include "rolling_median.h"
@@ -36,6 +37,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using namespace Rcpp;
 
 // [[Rcpp::interfaces(r, cpp)]]
+
 
 /*
 * TODO:
@@ -52,20 +54,25 @@ using namespace Rcpp;
 *        (2) all calculations with vector length > N (N to be determined)
 */
 
-// for one-vector calculations {std. deviation, variance, z-score} // 
-enum CalcTypeVar {STDDEV, VAR, ZSCORE};
-
-// for two-vector calculations {covariance, correlation}
-enum CalcTypeCov {BETA, COV, CORR};
-
-// for one-vector calculations of higher moments {skewness and kurtosis}
-enum CalcTypeMom {SKEW, KURT};
-
-// for squared error calculations {mean of sq err, root mean sq err, sum of sq err}
-enum CalcTypeSqErr {MEAN, RMSE, SUM};
+// types of calculations for functions with multiple possible calculations
+enum CalcType {COMPOUND, STDDEV, VAR, ZSCORE, BETA, COV, CORR, SKEW, KURT, MEAN, RMSE, SUM, MEANSQ, SUMSQ, MAE, MSE, MEDIAN, SUMPROD, SSE, MIN, MAX, PROD};
 
 // basic error constants
 enum ErrorType {XY_LEN_NE, X_LEN_EQ_0, X_LEN_LT_WIN, X_LEN_EQ_1, WIN_LEN_EQ_0, WIN_LEN_EQ_1, WIN_LEN_EQ_N};
+
+// sanity checking function for data input
+enum CheckFun {X, X1, X2, X3, X4, XY, XY1};
+
+// stores non-standard function arguments
+struct Args {
+  int window;
+  bool expanding;
+  bool pop;
+  CalcType ctype;
+  bool na_rm;
+  double scale;
+  CheckFun check_fun;
+};
 
 // print errors to R console
 void print_error(ErrorType etype, int minwin = 1) {
@@ -97,7 +104,7 @@ void print_error(ErrorType etype, int minwin = 1) {
   }
   if (errmsg == "")
     errmsg = "unsepcified error";
-  Rcpp::stop(errmsg.c_str());
+  Rcpp::warning(errmsg.c_str());
 }
 
 // converts SEXP to NumericMatrix
@@ -112,66 +119,300 @@ void setnames(NumericMatrix& source, NumericMatrix& target) {
 }
 
 // check x for cases when length(x) must be >= n
-void check_xn(const NumericVector& x, int window, int minwin){
-  if (x.length() < 2)
+bool check_xn(const NumericVector& x, int window, int minwin){
+  if (x.length() < 2){
     print_error(X_LEN_EQ_1);
-  
-  if (window < minwin)
-    print_error(WIN_LEN_EQ_N, minwin);
-  
-  if (x.length() < window)
+    return false;
+  }
+  if (window < minwin){
+    print_error(WIN_LEN_EQ_N, minwin);    
+    return false;
+  }
+  if (x.length() < window){
     print_error(X_LEN_LT_WIN);
+    return false;
+  }
+  return true;
 }
 
 // check x for cases when length(x) must be >= 2
-void check_x(const NumericVector& x, int window){
-  if (x.length() < 2)
+bool check_x(const NumericVector& x, int window){
+  if (x.length() < 2){
     print_error(X_LEN_EQ_1);
-  
-  if (window < 2)
+    return false;
+  }
+  if (window < 2){
     print_error(WIN_LEN_EQ_1);
-  
-  if (x.length() < window)
+    return false;
+  }
+  if (x.length() < window){
     print_error(X_LEN_LT_WIN);
+    return false;
+  }
+  return true;
 }
 
 // check x for cases when length(x) must be >= 1
-void check_x1(const NumericVector& x, int window){
-  if (x.length() == 0)
+bool check_x1(const NumericVector& x, int window){
+  if (x.length() == 0){
     print_error(X_LEN_EQ_0);
-  
-  if (window == 0)
+    return false;
+  }
+  if (window == 0){
     print_error(WIN_LEN_EQ_0);
-  
-  if (x.length() < window)
+    return false;
+  }
+  if (x.length() < window){
     print_error(X_LEN_LT_WIN);
+    return false;
+  }
+  return true;
 }
 
 // check x and y for two-vector calculations
-void check_xy(const NumericVector& x, const NumericVector& y, int window){
-  if (x.length() != y.length())
+bool check_xy(const NumericVector& x, const NumericVector& y, int window){
+  if (x.length() != y.length()){
     print_error(XY_LEN_NE);
-  
-  if (window < 2)
+    return false;
+  }
+  if (window < 2){
     print_error(WIN_LEN_EQ_1);
-  
-  if (x.length() < 2)
+    return false;
+  }
+  if (x.length() < 2){
     print_error(X_LEN_EQ_1);
-  
-  if (x.length() < window)
+    return false;
+  }
+  if (x.length() < window){
     print_error(X_LEN_LT_WIN);
+    return false;
+  }
+  return true;
 }
 
 // check x and y for two-vector calculations
-void check_xy1(const NumericVector& x, const NumericVector& y, int window){
-  if (x.length() != y.length())
+bool check_xy1(const NumericVector& x, const NumericVector& y, int window){
+  if (x.length() != y.length()){
     print_error(XY_LEN_NE);
-  
-  if (window == 0)
+    return false;
+  }
+  if (window == 0){
     print_error(WIN_LEN_EQ_0);
-  
-  if (x.length() < window)
+    return false;
+  }
+  if (x.length() < window){
     print_error(X_LEN_LT_WIN);
+    return false;
+  }
+  return true;
+}
+
+// check x based on check fun type
+bool check_function_xy(Args a, const NumericVector&x, const NumericVector&y){
+  CheckFun f = a.check_fun;
+  if(f == XY){
+    return check_xy(x, y, a.window);
+  } else if(f == XY1) {
+    return check_xy1(x, y, a.window);
+  }
+  return false;
+}
+
+// check x and y based on check fun type
+bool check_function_x(Args a, const NumericVector&x){
+  CheckFun f = a.check_fun;
+  if(a.check_fun == X){
+    return check_x(x, a.window);
+  } else if(f == X1){
+    return check_x1(x, a.window);
+  } else if(f == X2){
+    return check_xn(x, a.window, 2);
+  } else if(f == X3){
+    return check_xn(x, a.window, 3);
+  } else if(f == X4){
+    return check_xn(x, a.window, 4);
+  }
+  return false;
+}
+
+// check if vector is of type NA
+bool isna(double x){
+  return NumericVector::is_na(x);
+}
+
+// substitute missing values for provided replacement value
+NumericVector na_sub(const NumericVector& x, double repl, bool last_obs, int maxgap) {
+  
+  int n  = x.length();
+  NumericVector y(n);
+  
+  int gap_start_idx = -1, gap_count = 0;
+  bool start = false, na_sequence = false;
+  NumericVector prev_val(1);
+  prev_val[0] = NA_REAL;
+  
+  if(maxgap == -1){
+    maxgap = 2147483647; // largest signed integer
+  }
+  
+  for (int i = 0; i < n; ++i) {
+    y[i] = x[i];
+    if (NumericVector::is_na(x[i])) {
+      if (start) {
+        na_sequence = true;
+      }
+      if (na_sequence) {
+        ++gap_count;
+        if (gap_start_idx == -1) {
+          gap_start_idx = i;
+        }
+        if (gap_count <= maxgap) {
+          if(last_obs){
+            repl = prev_val[0];
+          }
+          y[i] = repl;
+        } else if (gap_count == maxgap + 1) {
+          // we've gone over maxgap, so we need to go back to
+          // the start of the gap sequence and replace repl values
+          // with NAs
+          for (int k = gap_start_idx; k < i; ++k) {
+            y[k] = NA_REAL;
+          } 
+        } // for case gap_count > maxgap + 1, we leave NAs intact.
+      }
+    } else {
+      start = true;
+      na_sequence = false;
+      gap_start_idx = -1;
+      gap_count = 0;
+    }
+    if(!isna(x[i])){
+      prev_val[0] = x[i];  
+    }
+  }  
+  return y;
+}
+
+NumericMatrix ok_item_markers(const NumericVector& x, int window, bool expanding) {
+  
+  // first column holds 0/1 flag; 1 if x_i = NA, 0 otherwise
+  // second column holds 0/1 flag; 1 if x_i is calculable , 0 otherwise
+  NumericMatrix y(x.length(), 2);
+  
+  // number of consecutive non-NA values
+  int consec_ok = 0;
+  
+  for (int i = 0; i < x.length(); ++i) {
+    if(isna(x[i])) {
+      y(i, 0) = 1;
+      if(!expanding){
+        consec_ok = 0;
+      }
+    } else {
+      ++consec_ok;
+      if(consec_ok >= window){
+        y(i, 1) = 1;
+      }
+    }
+  }
+  return y;
+}
+
+NumericMatrix ok_item_markers_2(const NumericVector& x, const NumericVector& y, int window, bool expanding) {
+  
+  // first column holds 0/1 flag; 1 if x_i = NA, 0 otherwise
+  // second column holds 0/1 flag; 1 if x_i is calculable , 0 otherwise
+  NumericMatrix z(x.length(), 2);
+  
+  // number of consecutive non-NA values
+  int consec_ok = 0;
+  
+  for (int i = 0; i < x.length(); ++i) {
+    if(isna(x[i]) || isna(y[i])) {
+      z(i, 0) = 1;
+      if(!expanding){
+        consec_ok = 0;
+      }
+    } else {
+      ++consec_ok;
+      if(consec_ok >= window){
+        z(i, 1) = 1;
+      }
+    }
+  }
+  return z;
+}
+
+// maps na-clean data back to original data dimensions by using "marker" matrix
+NumericVector map_items(const NumericMatrix& markers, const NumericVector& rollx, int window) {
+  NumericVector x(markers.nrow());
+  int k = 0;
+  for (int i = 0; i < x.length(); ++i) {
+    x[i] = NA_REAL;
+    // if original item i is not NA
+    if(markers(i, 0) == 0){
+      x[i] = rollx[k];
+      ++k;
+      // if original item i is not calculable
+      if(markers(i, 1) == 0){
+        x[i] = NA_REAL;
+      }
+    }
+  }
+  return x;
+}
+
+NumericVector nas(int n){
+  NumericVector x(n);
+  for(int i = 0; i < n; i++) x[i] = NA_REAL;
+  return x;
+}
+
+// handles NAs for functions with single input vector
+NumericVector na_handler(NumericVector (*f)(const NumericVector&, Args),
+                         const NumericVector& x, Args a){
+  NumericMatrix markers = ok_item_markers(x, a.window, a.expanding);
+  NumericVector x_clean = na_omit(x);
+  if(!check_function_x(a, x_clean)){
+    return nas(x.length());
+  }
+  NumericVector rollx = f(x_clean, a);
+  return map_items(markers, rollx, a.window);
+}
+
+// handles NAs for functions with X & Y input vectors
+NumericVector na_handler_2(NumericVector (*f)(const NumericVector&, const NumericVector&, Args), 
+                           const NumericVector& x, const NumericVector& y, Args a){
+  
+  NumericMatrix xy_markers = ok_item_markers_2(x, y, a.window, a.expanding);
+  
+  LogicalVector xy_ok(x.length());
+  int ok_count = 0;
+  for(int i = 0; i < x.length(); ++i){
+    if(!isna(x[i]) && !isna(y[i])){
+      ++ok_count;
+      xy_ok[i] = true;
+    }
+  }
+  
+  NumericVector x_clean(ok_count);
+  NumericVector y_clean(ok_count);
+  
+  for(int i = 0, k = 0; i < xy_ok.length(); ++i){
+    if(xy_ok[i]){
+      x_clean[k] = x[i];
+      y_clean[k] = y[i];
+      ++k;
+    }
+  }
+  
+  if(!check_function_xy(a, x_clean, y_clean)){
+    return nas(x.length());
+  }
+  
+  NumericVector rollxy = f(x_clean, y_clean, a);
+  
+  return map_items(xy_markers, rollxy, a.window);
 }
 
 /* ------------------------------
@@ -182,20 +423,20 @@ void check_xy1(const NumericVector& x, const NumericVector& y, int window){
 */
 
 // calculates rolling compound (useful for financial asset returns)
-NumericVector rolling_compound(const NumericVector& x, int window, long double scale, bool expanding) {
+NumericVector rolling_compound(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
+  check_x1(x, a.window);
   
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double prod = 1;
   for (int i = 0; i < n; ++i) {
     prod *= 1 + x[i];
-    if (i >= window - 1){
-      if (expanding) {
-        rollx[i] = pow(prod, scale / (long double) (i + 1)) - 1;
+    if (i >= a.window - 1){
+      if (a.expanding) {
+        rollx[i] = pow(prod, a.scale / (long double) (i + 1)) - 1;
       } else {
-        rollx[i] = pow(prod, scale / (long double) window) - 1;
+        rollx[i] = pow(prod, a.scale / (long double) a.window) - 1;
         prod /= (1 + x[i - w1]);  
       }
     } else {
@@ -206,19 +447,18 @@ NumericVector rolling_compound(const NumericVector& x, int window, long double s
 }
 
 // calculates rolling window for one of {covariance, correlation, beta}
-NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y, 
-                                  int window, bool pop, bool expanding, CalcTypeCov ctype) {
+NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y, Args a) {
   
-  if (pop) {
-    check_xy1(x, y, window); 
+  if (a.pop) {
+    check_xy1(x, y, a.window); 
   } else {
-    check_xy(x, y, window);  
+    check_xy(x, y, a.window);  
   }
   
-  int W = window;
+  int W = a.window;
   int n_xy = x.length();
   int w = 0;
-  int pop_n = pop ? W : W - 1;
+  int pop_n = a.pop ? W : W - 1;
   long double avg_x = 0, sumsq_x = 0, delta_x = 0, var_x = 0, sd_x = 0, sum_x = 0;
   long double avg_y = 0, sumsq_y = 0, delta_y = 0, var_y = 0, sd_y = 0, sum_y = 0;
   long double sum_xy = 0;
@@ -226,7 +466,7 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
   
   NumericVector rollxy(n_xy);
   
-  if (expanding) {
+  if (a.expanding) {
     for (int i = 0; i < n_xy; ++i) {
       ++w;
       delta_x = x[i] - avg_x;
@@ -241,20 +481,21 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
       
       sum_xy += x[i] * y[i];
       
-      pop_n = (pop ? w : w - 1);
+      pop_n = (a.pop ? w : w - 1);
       var_x = sumsq_x / pop_n;
       var_y = sumsq_y / pop_n;
-      if(ctype == CORR) {
+      if(a.ctype == CORR) {
         sd_x = sqrt(var_x);
         sd_y = sqrt(var_y);  
       }
       cov = (sum_xy - sum_x * sum_y / w) / pop_n;
       
-      if (i >= window - 1) {
-        switch (ctype) {
+      if (i >= a.window - 1) {
+        switch (a.ctype) {
         case BETA : rollxy[i] = cov / var_x; break;
         case CORR : rollxy[i] = cov / (sd_x * sd_y); break;
         case COV  : rollxy[i] = cov; break;
+        default : break;
         }  
       } else {
         rollxy[i] = NA_REAL;
@@ -282,16 +523,17 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
   
   var_x = sumsq_x / pop_n;
   var_y = sumsq_y / pop_n;
-  if(ctype == CORR) {
+  if(a.ctype == CORR) {
     sd_x = sqrt(var_x);
     sd_y = sqrt(var_y);  
   }
   cov = (sum_xy - sum_x * sum_y / W) / pop_n;
   
-  switch (ctype) {
+  switch (a.ctype) {
   case BETA : rollxy[W - 1] = cov / var_x; break;
   case CORR : rollxy[W - 1] = cov / (sd_x * sd_y); break;
   case COV  : rollxy[W - 1] = cov; break;
+  default: break;
   }
   
   // std dev terms
@@ -302,21 +544,21 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
     
     // std dev of x
     xi = x[i];
-    if (ctype == BETA || ctype == CORR) {
+    if (a.ctype == BETA || a.ctype == CORR) {
       avg_old_x = avg_x;
       avg_x = avg_old_x + (xi - xi_old) / W;
       var_x += (xi - xi_old)*(xi - avg_x + xi_old - avg_old_x) / pop_n;
-      if(ctype == CORR)
+      if(a.ctype == CORR)
         sd_x = sqrt(var_x);
     }
     
     // std dev of y
     yi = y[i];
-    if (ctype == BETA || ctype == CORR) {
+    if (a.ctype == BETA || a.ctype == CORR) {
       avg_old_y = avg_y;
       avg_y = avg_old_y + (yi - yi_old) / W;
       var_y += (yi - yi_old)*(yi - avg_y + yi_old - avg_old_y) / pop_n;
-      if(ctype == CORR)
+      if(a.ctype == CORR)
         sd_y = sqrt(var_y);
     }
     
@@ -326,10 +568,11 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
     sum_y += yi - yi_old;
     cov = (sum_xy - sum_x * sum_y / W) / pop_n;
     
-    switch (ctype) {
+    switch (a.ctype) {
     case BETA : rollxy[i] = cov / var_x; break;
     case CORR : rollxy[i] = cov / (sd_x * sd_y); break;
     case COV  : rollxy[i] = cov; break;
+    default: break;
     }
     
     xi_old = x[i - W + 1];
@@ -339,20 +582,20 @@ NumericVector rolling_covcorrbeta(const NumericVector& x, const NumericVector& y
 }
 
 // calculates rolling mean
-NumericVector rolling_mean(const NumericVector& x, int window, bool expanding) {
+NumericVector rolling_mean(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
+  check_x1(x, a.window);
   
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double sum = 0;
   for (int i = 0; i < n; ++i) {
     sum += x[i];
-    if (i >= window - 1){
-      if (expanding) {
+    if (i >= a.window - 1){
+      if (a.expanding) {
         rollx[i] = sum / (i + 1);
       } else {
-        rollx[i] = sum / window;
+        rollx[i] = sum / a.window;
         sum -= x[i - w1];  
       }
     } else {
@@ -363,21 +606,20 @@ NumericVector rolling_mean(const NumericVector& x, int window, bool expanding) {
 }
 
 // calculates rolling mean absolute error
-NumericVector rolling_meanabserr(const NumericVector& x, const NumericVector& y, int window, 
-                                 bool expanding) {
+NumericVector rolling_meanabserr(const NumericVector& x, const NumericVector& y, Args a) {
   
-  check_xy1(x, y, window);
+  check_xy1(x, y, a.window);
   
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double sumabserr = 0;
   for (int i = 0; i < n; ++i) {
     sumabserr += std::abs(x[i] - y[i]);
-    if (i >= window - 1) {
-      if (expanding) {
+    if (i >= a.window - 1) {
+      if (a.expanding) {
         rollx[i] = sumabserr / (i + 1);
       } else {
-        rollx[i] = sumabserr / window;  
+        rollx[i] = sumabserr / a.window;  
         sumabserr -= std::abs(x[i-w1] - y[i - w1]);
       }
     } else {
@@ -388,20 +630,20 @@ NumericVector rolling_meanabserr(const NumericVector& x, const NumericVector& y,
 }
 
 // calcuates rolling median
-NumericVector rolling_med(const NumericVector& x, int window, bool expanding) {
+NumericVector rolling_med(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
+  check_x1(x, a.window);
   
   int n = x.length();
   NumericVector rollx(n);
   
-  if (expanding) {
+  if (a.expanding) {
     
     ExpandingMedian* median = new ExpandingMedian();
     
     for (int i = 0; i < n; ++i) {
       median->Insert(x[i]);
-      if (i >= window - 1) {
+      if (i >= a.window - 1) {
         rollx[i] = median->GetMedian();  
       } else {
         rollx[i] = NA_REAL;
@@ -411,11 +653,11 @@ NumericVector rolling_med(const NumericVector& x, int window, bool expanding) {
     
   } else {
     
-    Mediator* m = MediatorNew(window);
+    Mediator* m = MediatorNew(a.window);
     
     for (int i = 0; i < n; ++i) {
       MediatorInsert(m, x[i]);
-      if (i >= window - 1) {
+      if (i >= a.window - 1) {
         rollx[i] = MediatorMedian(m);
       } else {
         rollx[i] = NA_REAL;
@@ -429,17 +671,17 @@ NumericVector rolling_med(const NumericVector& x, int window, bool expanding) {
 }
 
 // calculates rolling window for one of {minimum, maximum}
-NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool expanding) {
+NumericVector rolling_minmax(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
+  check_x1(x, a.window);
   
   int n  = x.length();
   NumericVector rollx(n);
   
-  if (expanding) {
+  if (a.expanding) {
     long double minmax = x[0];
     for (int i = 0; i < n; ++i) {
-      if (min) {
+      if (a.ctype == MIN) {
         if (x[i] < minmax) {
           minmax = x[i];
         }
@@ -448,7 +690,7 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
           minmax = x[i];
         }
       }
-      if (i >= window - 1) {
+      if (i >= a.window - 1) {
         rollx[i] = minmax;  
       } else {
         rollx[i] = NA_REAL;
@@ -459,7 +701,7 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
   
   std::deque< std::pair<long double, int> > deck;
   for (int i = 0; i < x.size(); ++i) {
-    if(min) {
+    if(a.ctype == MIN) {
       while (!deck.empty() && deck.back().first >= x[i])
         deck.pop_back();
     } else {
@@ -468,11 +710,11 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
     }
     deck.push_back(std::make_pair(x[i], i));
     
-    while(deck.front().second <= i - window)
+    while(deck.front().second <= i - a.window)
       deck.pop_front();
     
     long double min = deck.front().first;
-    if (i < window - 1) {
+    if (i < a.window - 1) {
       rollx[i] = NA_REAL;
     } else {
       rollx[i] = min;
@@ -482,18 +724,16 @@ NumericVector rolling_minmax(const NumericVector& x, int window, bool min, bool 
 }
 
 // calculates rolling product
-NumericVector rolling_prod(const NumericVector& x, int window, bool expanding) {
+NumericVector rolling_prod(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
-  
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double prod = 1;
   for (int i = 0; i < n; ++i) {
     prod *= x[i];
-    if (i >= window - 1) {
+    if (i >= a.window - 1) {
       rollx[i] = prod;
-      if (!expanding)
+      if (!a.expanding)
         prod /= x[i - w1];
     } else {
       rollx[i] = NA_REAL;  
@@ -503,27 +743,17 @@ NumericVector rolling_prod(const NumericVector& x, int window, bool expanding) {
 }
 
 // calculates rolling window for one of {skewness, kurtosis}
-NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, CalcTypeMom ctype, bool expanding) {
-  
-  if (ctype == SKEW) {
-    if (pop) {
-      check_xn(x, window, 3);
-    } else {
-      check_xn(x, window, 2);
-    }
-  } else if (ctype == KURT) {
-    check_xn(x, window, 4);
-  }
+NumericVector rolling_skewkurt(const NumericVector& x, Args a) {
   
   // ----------------------------
   // expanding window calculation  
   // ----------------------------
   
-  int W = window;
+  int W = a.window;
   int n_x = x.length();
   NumericVector rollx(n_x);
   
-  if (expanding) {
+  if (a.expanding) {
     
     int n = 0;
     long double delta = 0, delta_n = 0, delta_n2 = 0, term1 = 0;
@@ -542,7 +772,7 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
       delta_n2 = delta_n * delta_n;
       term1 = delta * delta_n * (n - 1);
       M1 += delta_n;
-      if (ctype == KURT) {
+      if (a.ctype == KURT) {
         M4 += term1 * delta_n2 * (n*n - 3*n + 3) + 6 * delta_n2 * M2 - 4 * delta_n * M3;  
       }
       M3 += term1 * delta_n * (n - 2) - 3 * delta_n * M2;
@@ -552,12 +782,12 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
       if (i < W - 1) {
         rollx[i] = NA_REAL;
       } else {
-        if (ctype == SKEW) {
-          pop_skew = pop ? double(n)*sqrt(double(n)-1)/(double(n)-2): sqrt(double(n));
+        if (a.ctype == SKEW) {
+          pop_skew = a.pop ? double(n)*sqrt(double(n)-1)/(double(n)-2): sqrt(double(n));
           rollx[i] = pop_skew * M3 / pow(M2, 1.5);
-        } else if (ctype == KURT) {
+        } else if (a.ctype == KURT) {
           rollx[i] = n * M4 / (M2*M2) - 3;
-          if(!pop){
+          if(!a.pop){
             rollx[i] = ((n+1)*rollx[i] +6)*(n-1)/((n-2)*(n-3));
           }
         }  
@@ -572,8 +802,8 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
     // rolling window calculation  
     // ----------------------------
     
-    if (ctype == SKEW) {
-      pop_skew = pop ? double(W)*sqrt(double(W)-1)/(double(W)-2): sqrt(double(W));
+    if (a.ctype == SKEW) {
+      pop_skew = a.pop ? double(W)*sqrt(double(W)-1)/(double(W)-2): sqrt(double(W));
     }
     
     // 2nd moment (M2)
@@ -614,13 +844,13 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
       if (i >= W - 1) {
         xi_old   = x[i - w1];
         
-        if (ctype == SKEW) {
+        if (a.ctype == SKEW) {
           M3 = sumx3 - c1_M3*sumx*sumx2 + c2_M3*pow(sumx, 3);
           rollx[i] = pop_skew * M3 / pow(M2, 1.5);  
-        } else if (ctype == KURT) {        
+        } else if (a.ctype == KURT) {        
           M4 = sumx4 + sumx*(c1_M4*sumx*sumx2 + c2_M4*sumx3 + c3_M4*pow(sumx, 3));
           rollx[i] = W*M4 / (M2*M2) - 3;
-          if (!pop) {
+          if (!a.pop) {
             rollx[i] = ((W+1)*rollx[i] + 6) * (W-1)/((W-2)*(W-3));
           }
         }
@@ -638,18 +868,16 @@ NumericVector rolling_skewkurt(const NumericVector& x, int window, bool pop, Cal
 }
 
 // calculates rolling sum
-NumericVector rolling_sum(const NumericVector& x, int window, bool expanding) {
+NumericVector rolling_sum(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
-  
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double sum = 0;
   for (int i = 0; i < n; ++i) {
     sum += x[i];
-    if (i >= window - 1) {
+    if (i >= a.window - 1) {
       rollx[i] = sum;
-      if (!expanding)
+      if (!a.expanding)
         sum -= x[i - w1];
     } else {
       rollx[i] = NA_REAL;  
@@ -659,18 +887,16 @@ NumericVector rolling_sum(const NumericVector& x, int window, bool expanding) {
 }
 
 // calculates rolling sum product
-NumericVector rolling_sumprod(const NumericVector& x, const NumericVector& y, int window, bool expanding) {
+NumericVector rolling_sumprod(const NumericVector& x, const NumericVector& y, Args a) {
   
-  check_xy1(x, y, window);
-  
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double sumprod = 0;
   for (int i = 0; i < n; ++i) {
     sumprod += x[i] * y[i];
-    if (i >= window - 1) {
+    if (i >= a.window - 1) {
       rollx[i] = sumprod;
-      if (!expanding)
+      if (!a.expanding)
         sumprod -= x[i - w1] * y[i - w1];
     } else {
       rollx[i] = NA_REAL;  
@@ -680,21 +906,19 @@ NumericVector rolling_sumprod(const NumericVector& x, const NumericVector& y, in
 }
 
 // calculates one of rolling {mean of squares, sum of squares}
-NumericVector rolling_sumsq(const NumericVector& x, int window, bool expanding, CalcTypeSqErr ctype) {
+NumericVector rolling_sumsq(const NumericVector& x, Args a) {
   
-  check_x1(x, window);
-  
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double sumsq = 0;
   for (int i = 0; i < n; ++i) {
     sumsq += x[i] * x[i];
-    if (i >= window - 1) {
+    if (i >= a.window - 1) {
       rollx[i] = sumsq; 
-      if (ctype == MEAN) {
-        rollx[i] /= expanding ? i + 1 : window;
+      if (a.ctype == MEANSQ) {
+        rollx[i] /= a.expanding ? i + 1 : a.window;
       }
-      if (!expanding) {
+      if (!a.expanding) {
         sumsq -= x[i - w1] * x[i - w1];
       }
     } else {
@@ -705,26 +929,23 @@ NumericVector rolling_sumsq(const NumericVector& x, int window, bool expanding, 
 }
 
 // calculates rolling sum of squared errors
-NumericVector rolling_sqerr(const NumericVector& x, const NumericVector& y, int window, 
-                            bool expanding, CalcTypeSqErr ctype) {
+NumericVector rolling_sqerr(const NumericVector& x, const NumericVector& y, Args a) {
   
-  check_xy1(x, y, window);
-  
-  int n  = x.length(), w1 = window - 1;
+  int n  = x.length(), w1 = a.window - 1;
   NumericVector rollx(n);
   long double sumsqerr = 0;
   int k = 0;
   for (int i = 0; i < n; ++i) {
     sumsqerr += x[i]*x[i] - 2*x[i]*y[i] + y[i]*y[i];
-    if (i >= window - 1) {
+    if (i >= a.window - 1) {
       rollx[i] = sumsqerr;
-      if (ctype == MEAN || ctype == RMSE) {
-        rollx[i] /= expanding ? i + 1 : window;
-        if (ctype == RMSE) {
+      if (a.ctype == MSE || a.ctype == RMSE) {
+        rollx[i] /= a.expanding ? i + 1 : a.window;
+        if (a.ctype == RMSE) {
           rollx[i] = sqrt(rollx[i]);
         }
       }
-      if (!expanding) {
+      if (!a.expanding) {
         k = i - w1;
         sumsqerr -= x[k]*x[k] - 2*x[k]*y[k] + y[k]*y[k];
       }
@@ -736,31 +957,25 @@ NumericVector rolling_sqerr(const NumericVector& x, const NumericVector& y, int 
 }
 
 // calculates rolling window for one of {variance, std. deviation, z-score}
-NumericVector rolling_varsdz(const NumericVector& x, int window, bool pop, CalcTypeVar ctype, bool expanding) {
+NumericVector rolling_varsdz(const NumericVector& x, Args a) {
   
-  if (pop && ctype!=ZSCORE) {
-    check_x1(x, window);  
-  } else {
-    check_x(x, window);
-  }
-  
-  int W = window;
+  int W = a.window;
   int n_x = x.length();
   int n = 0;
-  int var_n = pop ? W : W - 1;
+  int var_n = a.pop ? W : W - 1;
   long double avg = 0, sumsq = 0, delta = 0, varsd = 0, varsd_tmp = 0;
   NumericVector rollx(n_x);
   
-  if (expanding) {
+  if (a.expanding) {
     for (int i = 0; i < n_x; ++i) {
       ++n;
       delta = x[i] - avg;
       avg += delta / n;
       sumsq += delta * (x[i] - avg);
-      varsd = sumsq / (pop ? n : n - 1);
-      varsd_tmp = (ctype == STDDEV || ctype == ZSCORE) ? sqrt(varsd) : varsd;
-      if (i >= window - 1) {
-        if (ctype == ZSCORE) {
+      varsd = sumsq / (a.pop ? n : n - 1);
+      varsd_tmp = (a.ctype == STDDEV || a.ctype == ZSCORE) ? sqrt(varsd) : varsd;
+      if (i >= a.window - 1) {
+        if (a.ctype == ZSCORE) {
           // handle z-score case to avoid division by zero
           rollx[i] = (i == 0) ? NA_REAL : (x[i] - avg) / varsd_tmp;
         } else {
@@ -782,9 +997,9 @@ NumericVector rolling_varsdz(const NumericVector& x, int window, bool pop, CalcT
   }
   
   varsd = sumsq / var_n;
-  varsd_tmp = (ctype == STDDEV || ctype == ZSCORE) ? sqrt(varsd) : varsd;
+  varsd_tmp = (a.ctype == STDDEV || a.ctype == ZSCORE) ? sqrt(varsd) : varsd;
   
-  rollx[W - 1] = (ctype == ZSCORE) ? (x[W-1] - avg) / varsd_tmp : varsd_tmp;
+  rollx[W - 1] = (a.ctype == ZSCORE) ? (x[W-1] - avg) / varsd_tmp : varsd_tmp;
   
   long double xi_old = x[0], xi = 0, avg_old = 0;
   
@@ -796,8 +1011,8 @@ NumericVector rolling_varsdz(const NumericVector& x, int window, bool pop, CalcT
     xi_old = x[i - W + 1];
     
     if (i >= W - 1){
-      varsd_tmp = (ctype == STDDEV || ctype == ZSCORE) ? sqrt(varsd) : varsd;
-      rollx[i] = (ctype == ZSCORE) ? (xi - avg) / varsd_tmp : varsd_tmp;
+      varsd_tmp = (a.ctype == STDDEV || a.ctype == ZSCORE) ? sqrt(varsd) : varsd;
+      rollx[i] = (a.ctype == ZSCORE) ? (xi - avg) / varsd_tmp : varsd_tmp;
     } else {
       rollx[i] = NA_REAL;  
     }
@@ -805,120 +1020,177 @@ NumericVector rolling_varsdz(const NumericVector& x, int window, bool pop, CalcT
   return rollx;
 }
 
+// columnwise apply() for function with most basic signature (SEXP, int, bool, bool)
+NumericMatrix apply_rolling_FUN_1(NumericVector (*f)(const NumericVector&, Args), 
+                                  const SEXP& x, Args a){
+  NumericMatrix R = as_matrix(x);
+  if(R.ncol() > 0) {
+    if(!check_function_x(a, R(_, 0))){
+      Rcpp::stop("Not enough data points to calculate the rolling statistic.");
+    }
+  }
+  NumericMatrix rollx(R.nrow(), R.ncol());
+  for (int i = 0; i < rollx.ncol(); ++i) {
+    if(a.na_rm){
+      rollx(_, i) = na_handler(f, R(_, i), a);
+    } else {
+      rollx(_, i) = f(R(_, i), a);    
+    }
+  }
+  setnames(R, rollx);
+  return rollx;
+}
+
+// columnwise apply() for function with most basic signature (SEXP, int, bool, bool, CalcType)
+NumericMatrix apply_rolling_FUN_2(NumericVector (*f)(const NumericVector&, const NumericVector&, Args), 
+                                  const SEXP& x, const SEXP& y, Args a){
+  NumericMatrix xmat = as_matrix(x);
+  NumericMatrix ymat = as_matrix(y);
+  if(ymat.ncol() > 1){
+    Rcpp::stop("y must be a vector or contain exactly 1 column of data.");
+  }
+  NumericVector yvec = ymat(_, 0);
+  if(xmat.ncol() > 0) {
+    if(!check_function_xy(a, xmat(_, 0), yvec)){
+      Rcpp::stop("Not enough data points to calculate the rolling statistic.");
+    }
+  }
+  NumericMatrix rollx(xmat.nrow(), xmat.ncol());
+  for (int i = 0; i < rollx.ncol(); ++i) {
+    if(a.na_rm){
+      rollx(_, i) = na_handler_2(f, xmat(_, i), yvec, a);
+    } else {
+      rollx(_, i) = f(xmat(_, i), yvec, a);    
+    }
+  }
+  setnames(xmat, rollx);
+  return rollx;
+}
+
+
 /*
-* PUBLIC EXPORTS
+* PUBLIC API
 */
 
+//'Replaces NAs with either the last non-NA observation, or a specified replacement value
 //'
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param repl The value used to replace NAs
+//'@param last_obs TRUE if the last non-NA observation should be used instead of a specified replacement value
+//'@param maxgap Runs of more than \code{maxgap} are retained. By default, the argument is set to 0, which 
+//'will preserve all NAs. If set to -1, the argument is set to infinity such that sequences of any size of NAs
+//'will be replaced with the last non-NA observation.
+// [[Rcpp::export]]
+NumericMatrix NaSub(const SEXP& x, double repl = 0, bool last_obs = true, int maxgap = 0) {
+  NumericMatrix R = as_matrix(x);
+  NumericMatrix y(R.nrow(), R.ncol());
+  for (int i = 0; i < y.ncol(); ++i) {
+    y(_, i) = na_sub(R(_, i), repl, last_obs, maxgap);
+  }
+  setnames(R, y);
+  return y;
+}
+
 //'Estimates the coefficient (beta) from a univariate linear model y ~ x over a rolling window
 //'
-//'Estimates \eqn{\hat{\beta_1}} from a ordinary least squares model \eqn{y = \beta_0 + \beta_1 x}.
+//'@param x A vector, matrix, list or other object coercible to a matrix; the independent variable
+//'@param y A vector, matrix, list or other object coercible to a vector; the dependent variable
+//'@param window The size of the rolling window
+//'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
+//'determines the starting number of observations used to calculate the statistic//'
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance
+//'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Estimates \eqn{\hat{\beta_1}} from an ordinary least squares model \eqn{y = \beta_0 + \beta_1 x}.
 //'Beta is defined as
 //'\deqn{ \code{Beta} = \frac{cov(x, y)}{\sigma^2_x} }
 //'where \eqn{cov} is covariance and \eqn{\sigma^2} is variance.
-//'
-//'@param x A vector or single-column matrix; the independent variable
-//'@param y A vector or single-column matrix; the dependent variable
-//'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance
-//'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
-//'determines the starting number of observations used to calculate the statistic
-//'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'If input \code{x} contains more than one column, the rolling window calculation will be performed on each
+//'column against the vector \code{y}. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericVector RollingBeta(const NumericVector& x, const NumericVector& y, int window, 
-                          bool pop = false, bool expanding = false) {
-  return rolling_covcorrbeta(x, y, window, pop, expanding, BETA);
+NumericVector RollingBeta(const SEXP& x, const SEXP& y, int window, 
+                          bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.pop = pop; a.ctype = BETA; a.check_fun = a.pop ? XY1 : XY;
+  return apply_rolling_FUN_2(rolling_covcorrbeta, x, y, a);
 }
 
 //'Calculates simple compounding over a rolling window (e.g. of financial asset return series)
-//'
-//'Compounding a series of rates of return is defined as
-//'\deqn{ \code{Compound} = \big(\prod^n_{i=1} (1+x_i)\big)^{scale / window} - 1 }
-//'where \code{scale} is a parameter provided to (optionally) normalize the compounding to a desired period length;
-//'this would commonly be used in a financial application where a return could be annualized by (e.g.) setting \code{scale}
-//'to 252, 52, 12 or 4 if the time series is daily, weekly, monthly or quarterly, respectively, although any value for \code{scale}
-//'may be used.
 //'
 //'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
 //'@param scale Used in the compounding exponent: product^(scale / window) - 1; any number (integer or floating point) may be used
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details Compounding a series of rates of return is defined as
+//'\deqn{ \code{Compound} = \big(\prod^n_{i=1} (1+x_i)\big)^{scale / window} - 1 }
+//'where \code{scale} is a parameter provided to (optionally) normalize the compounding to a desired period length;
+//'this would commonly be used in a financial application where a return could be annualized by (e.g.) setting \code{scale}
+//'to 252, 52, 12 or 4 if the time series is daily, weekly, monthly or quarterly, respectively, although any value for \code{scale}
+//'may be used.
 // [[Rcpp::export]]
-NumericMatrix RollingCompound(const SEXP& x, int window, long double scale = 1.0, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_compound(R(_, i), window, scale, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingCompound(const SEXP& x, int window, long double scale = 1.0, bool expanding = false, bool na_rm = true) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = COMPOUND; a.scale = scale; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_compound, x, a);
 }
 
 //'Calculates covariance over a rolling window
 //'
-//'Sample covariance (see parameter \code{pop}) is defined as
-//'\deqn{ \code{Cov} = \frac{1}{n-1} \sum^n_{i=1} (x_i - \bar{x})(y_i - \bar{y}) }
-//'
-//'@param x A vector or single-column matrix
-//'@param y A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param y A vector, matrix, list or other object coercible to a vector
 //'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) covariance, FALSE to calculate sample (n-1) covariance
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Sample covariance (see parameter \code{pop}) is defined as
+//'\deqn{ \code{Cov} = \frac{1}{n-1} \sum^n_{i=1} (x_i - \bar{x})(y_i - \bar{y}) }
 // [[Rcpp::export]]
-NumericVector RollingCov(const NumericVector& x, const NumericVector& y, int window, 
-                         bool pop = false, bool expanding = false) {
-  return rolling_covcorrbeta(x, y, window, pop, expanding, COV);
+NumericVector RollingCov(const SEXP& x, const SEXP& y, int window, 
+                         bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.pop = pop, a.ctype = COV; a.check_fun = a.pop ? XY1 : XY;
+  return apply_rolling_FUN_2(rolling_covcorrbeta, x, y, a);
 }
 
 //'Calculates Pearson correlation over a rolling window
 //'
-//'Correlation is defined as
-//'\deqn{ \code{Corr} = \frac{cov(x, y)}{\sigma_x\sigma_y} }
-//'where \eqn{cov} is the covariance and \eqn{\sigma} is the standard deviation
-//'
-//'@param x A vector or single-column matrix
-//'@param y A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param y A vector, matrix, list or other object coercible to a vector
 //'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) std. deviation, FALSE to calculate sample (n-1) std. deviation
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) std. deviation, FALSE to calculate sample (n-1) std. deviation
 //'determines the starting number of observations used to calculate the statistic
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Correlation is defined as
+//'\deqn{ \code{Corr} = \frac{cov(x, y)}{\sigma_x\sigma_y} }
+//'where \eqn{cov} is the covariance and \eqn{\sigma} is the standard deviation
 // [[Rcpp::export]]
-NumericVector RollingCorr(const NumericVector& x, const NumericVector& y, int window, 
-                          bool pop = false, bool expanding = false) {
-  return rolling_covcorrbeta(x, y, window, pop, expanding, CORR);
+NumericVector RollingCorr(const SEXP& x, const SEXP& y, int window, 
+                          bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.pop = pop, a.ctype = CORR; a.check_fun = a.pop ? XY1 : XY;
+  return apply_rolling_FUN_2(rolling_covcorrbeta, x, y, a);
 }
 
 //'Calculates the excess kurtosis over a rolling window
 //'
-//'Population excess skewness (see parameter \code{pop}) is defined as
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param window The size of the rolling window
+//'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
+//'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
+//'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
+//'@details Population excess skewness (see parameter \code{pop}) is defined as
 //'\deqn{ \code{Kurt} = \frac{\frac{1}{n}\sum^n_{i=1}(x_i-\bar{x})^4}{\big(\frac{1}{n}\sum^n_{i=1}(x_i-\bar{x})^2\big)^2} - 3}
 //'Sample excess kurtosis (see parameter \code{pop}) is defined as
 //'\deqn{ \code{Kurt} = \frac{n(n+1)}{(n-1)(n-2)(n-3)}\frac{\sum^n_{i=1}(x_i-\bar{x})^4}{\big(\sum^n_{i=1}(x_i-\bar{x})^2\big)^2} -3 \frac{(n-1)^2}{(n-2)(n-3)} }
-//'
-//'@param x A vector, matrix, list or other object coercible to a matrix
-//'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
-//'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
-//'determines the starting number of observations used to calculate the statistic
-//'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericMatrix RollingKurt(const SEXP& x, int window, bool pop = false, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_skewkurt(R(_, i), window, pop, KURT, expanding);
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingKurt(const SEXP& x, int window, bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.pop = pop, a.ctype = KURT; a.check_fun = X4;
+  return apply_rolling_FUN_1(rolling_skewkurt, x, a);
 }
 
 //'Calculates the maximum over a rolling window
@@ -927,96 +1199,80 @@ NumericMatrix RollingKurt(const SEXP& x, int window, bool pop = false, bool expa
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericMatrix RollingMax(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_minmax(R(_, i), window, false, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingMax(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MAX; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_minmax, x, a);
 }
 
 //'Calculates the arithmetic mean over a rolling window
 //'
-//'The arithmetic mean is defined as
-//'\deqn{\code{Mean} = \frac{1}{n}\sum^n_{i=1} x_i}
-//'
-//'@param x A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details The arithmetic mean is defined as
+//'\deqn{\code{Mean} = \frac{1}{n}\sum^n_{i=1} x_i}
 // [[Rcpp::export]]
-NumericMatrix RollingMean(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_mean(R(_, i), window, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingMean(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MEAN; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_mean, x, a);
 }
 
 //'Calculates the mean absolute error over a rolling window
 //'
-//'Mean absolute error is defined as
-//'\deqn{ \code{MAE} = \frac{1}{n}\sum^n_{i=1}|x_i - y_i| }
-//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
-//'
-//'@param x A vector or single-column matrix
-//'@param y A vector or single-column matrix; the error to be subtracted from x
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param y A vector, matrix, list or other object coercible to a vector
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Mean absolute error is defined as
+//'\deqn{ \code{MAE} = \frac{1}{n}\sum^n_{i=1}|x_i - y_i| }
+//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
 // [[Rcpp::export]]
-NumericVector RollingMAE(const NumericVector& x, const NumericVector& y, int window, bool expanding = false) {
-  return rolling_meanabserr(x, y, window, expanding);
+NumericVector RollingMAE(const SEXP& x, const SEXP& y, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MAE; a.check_fun = XY1;
+  return apply_rolling_FUN_2(rolling_meanabserr, x, y, a);
 }
 
 //'Calculates the mean of squares over a rolling window
 //'
-//'Mean of squares is defined as
-//'\deqn{ \code{MS} = \frac{1}{n}\sum^n_{i=1} x^2_i }
-//'
-//'@param x A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Mean of squares is defined as
+//'\deqn{ \code{MS} = \frac{1}{n}\sum^n_{i=1} x^2_i }
 // [[Rcpp::export]]
-NumericVector RollingMS(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_sumsq(R(_, i), window, expanding, MEAN);
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericVector RollingMS(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MEANSQ; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_sumsq, x, a);
 }
 
 //'Calculates the mean squared error over a rolling window
 //'
-//'Mean squared error is defined as
-//'\deqn{ \code{MSE} = \frac{1}{n}\sum^n_{i=1}(x_i - y_i)^2 }
-//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
-//'
-//'@param x A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param y A vector or single-column matrix; the error to be subtracted from x
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Mean squared error is defined as
+//'\deqn{ \code{MSE} = \frac{1}{n}\sum^n_{i=1}(x_i - y_i)^2 }
+//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
 // [[Rcpp::export]]
-NumericVector RollingMSE(const NumericVector& x, const NumericVector& y, int window, bool expanding = false) {
-  return rolling_sqerr(x, y, window, expanding, MEAN);
+NumericVector RollingMSE(const SEXP& x, const SEXP& y, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MSE; a.check_fun = XY1;
+  return apply_rolling_FUN_2(rolling_sqerr, x, y, a);
 }
 
 //'Calculates the median over a rolling window
@@ -1025,18 +1281,14 @@ NumericVector RollingMSE(const NumericVector& x, const NumericVector& y, int win
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
 //'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
 //'column. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericMatrix RollingMedian(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_med(R(_, i), window, expanding);
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingMedian(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MEDIAN; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_med, x, a);
 }
 
 //'Calculates the minimum over a rolling window
@@ -1045,233 +1297,185 @@ NumericMatrix RollingMedian(const SEXP& x, int window, bool expanding = false) {
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
 //'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
 //'column. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericMatrix RollingMin(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for(int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_minmax(R(_, i), window, true, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingMin(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = MIN; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_minmax, x, a);
 }
 
 //'Calculates the product over a rolling window
 //'
-//'Product is defined as
-//'\deqn{ \code{Prod} = \prod^n_{i=1} x_i }
-//'
 //'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details Product is defined as
+//'\deqn{ \code{Prod} = \prod^n_{i=1} x_i }
 // [[Rcpp::export]]
-NumericMatrix RollingProd(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_prod(R(_, i), window, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingProd(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = PROD; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_prod, x, a);
 }
 
 //'Calculates the root mean squared error over a rolling window
 //'
-//'Root mean squared error is defined as
-//'\deqn{ \code{RMSE} = \sqrt{\frac{1}{n}\sum^n_{i=1}(x_i - y_i)^2 } }
-//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
-//'
-//'@param x A vector or single-column matrix
-//'@param y A vector or single-column matrix; the error to be subtracted from x
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param y A vector, matrix, list or other object coercible to a vector; the error to be subtracted from x
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Root mean squared error is defined as
+//'\deqn{ \code{RMSE} = \sqrt{\frac{1}{n}\sum^n_{i=1}(x_i - y_i)^2 } }
+//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
 // [[Rcpp::export]]
-NumericVector RollingRMSE(const NumericVector& x, const NumericVector& y, int window, bool expanding = false) {
-  return rolling_sqerr(x, y, window, expanding, RMSE);
+NumericVector RollingRMSE(const SEXP& x, const SEXP& y, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = RMSE; a.check_fun = XY1;
+  return apply_rolling_FUN_2(rolling_sqerr, x, y, a);
 }
 
 //'Calculates the skewness over a rolling window
 //'
-//'Population skewness (see parameter \code{pop}) is defined as
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param window The size of the rolling window
+//'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
+//'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
+//'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
+//'@details Population skewness (see parameter \code{pop}) is defined as
 //'\deqn{ \code{Skew} = \sqrt{n}\frac{\sum^n_{i=1}(x_i-\bar{x})^3}{\big(\sum^n_{i=1}(x_i-\bar{x})^2\big)^{3/2}}}
 //'Sample skewness (see parameter \code{pop}) is defined as
 //'\deqn{ \code{Skew} = \frac{n\sqrt{n-1}}{n-2}\frac{\sum^n_{i=1}(x_i-\bar{x})^3}{\big(\sum^n_{i=1}(x_i-\bar{x})^2\big)^{3/2}}}
-//'
-//'@param x A vector, matrix, list or other object coercible to a matrix
-//'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
-//'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
-//'determines the starting number of observations used to calculate the statistic
-//'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
 // [[Rcpp::export]]
-NumericMatrix RollingSkew(const SEXP& x, int window, bool pop = false, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_skewkurt(R(_, i), window, pop, SKEW, expanding);
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingSkew(const SEXP& x, int window, bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = SKEW; a.pop = pop; a.check_fun = a.pop ? X3 : X2;
+  return apply_rolling_FUN_1(rolling_skewkurt, x, a);
 }
 
 //'Calculates the standard deviation over a rolling window
 //'
-//'Sample standard deviation (see parameter \code{pop}) is defined as
-//'\deqn{ \code{Std} = \sqrt{\frac{1}{n-1}\sum^n_{i=1}(x_i - \bar{x})^2} }
-//'
 //'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details Sample standard deviation (see parameter \code{pop}) is defined as
+//'\deqn{ \code{Std} = \sqrt{\frac{1}{n-1}\sum^n_{i=1}(x_i - \bar{x})^2} }
 // [[Rcpp::export]]
-NumericMatrix RollingStd(const SEXP& x, int window, bool pop = false, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_varsdz(R(_, i), window, pop, STDDEV, expanding);
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingStd(const SEXP& x, int window, bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = STDDEV; a.pop = pop; a.check_fun = a.pop ? X1 : X;
+  return apply_rolling_FUN_1(rolling_varsdz, x, a);
 }
 
 //'Calculates the sum over a rolling window
 //'
-//'Sum is defined as
-//'\deqn{ \code{Sum} = \sum^n_{i=1} x_i }
-//'
 //'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details Sum is defined as
+//'\deqn{ \code{Sum} = \sum^n_{i=1} x_i }
 // [[Rcpp::export]]
-NumericMatrix RollingSum(const SEXP& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_sum(R(_, i), window, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingSum(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = SUM; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_sum, x, a);
 }
 
 //'Calculates the sum product (dot product) over a rolling window
 //'
-//'Sum product is defined as
-//'\deqn{ \code{Sumprod} = \sum^n_{i=1} x_i y_i }
-//'
-//'@param x A vector or single-column matrix
-//'@param y A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param y A vector, matrix, list or other object coercible to a vector
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Sum product is defined as
+//'\deqn{ \code{Sumprod} = \sum^n_{i=1} x_i y_i }
 // [[Rcpp::export]]
-NumericVector RollingSumprod(const NumericVector& x, const NumericVector& y, int window, bool expanding = false) {
-  return rolling_sumprod(x, y, window, expanding);
+NumericVector RollingSumprod(const SEXP& x, const SEXP& y, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = SUMPROD; a.check_fun = XY1;
+  return apply_rolling_FUN_2(rolling_sumprod, x, y, a);
 }
 
 //'Calculates the sum of squares over a rolling window
 //'
-//'Sum of squares is defined as
-//'\deqn{ \code{SS} = \sum^n_{i=1} x^2_i }
-//'
-//'@param x A vector or single-column matrix
+//'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Sum of squares is defined as
+//'\deqn{ \code{SS} = \sum^n_{i=1} x^2_i }
 // [[Rcpp::export]]
-NumericVector RollingSS(const NumericVector& x, int window, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_sumsq(R(_, i), window, expanding, SUM);
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericVector RollingSS(const SEXP& x, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = SUMSQ; a.check_fun = X1;
+  return apply_rolling_FUN_1(rolling_sumsq, x, a);
 }
 
 //'Calculates the sum of squared errors over a rolling window
 //'
-//'Sum of squared errors is defined as
-//'\deqn{ \code{SSE} = \sum^n_{i=1}(x_i - y_i)^2 }
-//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
-//'
-//'@param x A vector or single-column matrix
-//'@param y A vector or single-column matrix; the error to be subtracted from x
+//'@param x A vector, matrix, list or other object coercible to a matrix
+//'@param y A vector, matrix, list or other object coercible to a vector; the error to be subtracted from x
 //'@param window The size of the rolling window
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
 //'@return A vector; rows 1 to (length(window) - 1) contain NAs.
+//'@details Sum of squared errors is defined as
+//'\deqn{ \code{SSE} = \sum^n_{i=1}(x_i - y_i)^2 }
+//'where \eqn{x} and \eqn{y} represent the predicted and actual (true) values.
 // [[Rcpp::export]]
-NumericVector RollingSSE(const NumericVector& x, const NumericVector& y, int window, bool expanding = false) {
-  return rolling_sqerr(x, y, window, expanding, SUM);
+NumericMatrix RollingSSE(const SEXP& x, const SEXP& y, int window, bool expanding = false, bool na_rm = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = SSE; a.check_fun = XY1;
+  return apply_rolling_FUN_2(rolling_sqerr, x, y, a);
 }
 
 //'Calculates the variance over a rolling window
 //'
-//'Sample variance (see parameter \code{pop}) is defined as
-//'\deqn{ \code{Var} = \frac{1}{n-1}\sum^n_{i=1}(x_i - \bar{x})^2 }
-//'
 //'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details Sample variance (see parameter \code{pop}) is defined as
+//'\deqn{ \code{Var} = \frac{1}{n-1}\sum^n_{i=1}(x_i - \bar{x})^2 }
 // [[Rcpp::export]]
-NumericMatrix RollingVar(const SEXP& x, int window, bool pop = false, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_varsdz(R(_, i), window, pop, VAR, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingVar(const SEXP& x, int window, bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = VAR; a.pop = pop; a.check_fun = a.pop ? X1 : X;
+  return apply_rolling_FUN_1(rolling_varsdz, x, a);
 }
 
 //'Calculates the z-score (standardized value) over a rolling window
 //'
-//'z-score is defined as
-//'\deqn{ \code{Zscore} = \frac{x - \bar{x}}{\sigma} }
-//'where \eqn{\sigma} is the standard deviation of x.
-//'
 //'@param x A vector, matrix, list or other object coercible to a matrix
 //'@param window The size of the rolling window
-//'@param pop TRUE to calculate population (n) standard deviation, FALSE to calculate sample (n-1) standard deviation
 //'@param expanding TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 //'determines the starting number of observations used to calculate the statistic
+//'@param na_rm TRUE to handle NAs (see notes on NA handling)
+//'@param pop TRUE to calculate population (n) standard deviation, FALSE to calculate sample (n-1) standard deviation
 //'@return A matrix; rows 1 to (length(window) - 1) contain NAs.
-//'@details If input \code{x} contains more than one column, the rolling window calculation will be performed on each
-//'column. The dimensions of the return value will be the same as input \code{x}.
+//'@details z-score is defined as
+//'\deqn{ \code{Zscore} = \frac{x - \bar{x}}{\sigma} }
+//'where \eqn{\sigma} is the standard deviation of x.
 // [[Rcpp::export]]
-NumericMatrix RollingZscore(const SEXP& x, int window, bool pop = false, bool expanding = false) {
-  NumericMatrix R = as_matrix(x);
-  NumericMatrix rollx(R.nrow(), R.ncol());
-  for (int i = 0; i < rollx.ncol(); ++i) {
-    rollx(_, i) = rolling_varsdz(R(_, i), window, pop, ZSCORE, expanding);  
-  }
-  setnames(R, rollx);
-  return rollx;
+NumericMatrix RollingZscore(const SEXP& x, int window, bool expanding = false, bool na_rm = false, bool pop = false) {
+  Args a; a.window = window; a.expanding = expanding; a.na_rm = na_rm; a.ctype = ZSCORE; a.pop = pop; a.check_fun = X;
+  return apply_rolling_FUN_1(rolling_varsdz, x, a);
 }
 
