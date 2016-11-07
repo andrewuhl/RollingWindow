@@ -4,7 +4,7 @@
 \alias{RollingSS}
 \title{Calculates the sum of squares over a rolling window}
 \usage{
-RollingSS(x, window, expanding = FALSE, na_rm = FALSE)
+RollingSS(x, window, expanding = FALSE, na_method = "none")
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
@@ -14,7 +14,7 @@ RollingSS(x, window, expanding = FALSE, na_rm = FALSE)
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
 
-\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+\item{na_method}{One of "none" (default), "ignore" or "window" (see notes on NA handling)}
 }
 \value{
 A vector; rows 1 to (length(window) - 1) contain NAs.

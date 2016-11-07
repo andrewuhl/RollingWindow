@@ -4,7 +4,8 @@
 \alias{NaSub}
 \title{Replaces NAs with either the last non-NA observation, or a specified replacement value}
 \usage{
-NaSub(x, repl = 0, last_obs = TRUE, maxgap = 0L)
+NaSub(x, repl = NA_real_, last_obs = TRUE, maxgap = -1L,
+  leading = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
@@ -16,6 +17,9 @@ NaSub(x, repl = 0, last_obs = TRUE, maxgap = 0L)
 \item{maxgap}{Runs of more than \code{maxgap} are retained. By default, the argument is set to 0, which 
 will preserve all NAs. If set to -1, the argument is set to infinity such that sequences of any size of NAs
 will be replaced with the last non-NA observation.}
+
+\item{leading}{If TRUE, leading NAs will be replaced by the value specified by \code{repl}, otherwise leading
+NAs will be preserved}
 }
 \description{
 Replaces NAs with either the last non-NA observation, or a specified replacement value

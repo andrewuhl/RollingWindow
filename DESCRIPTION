@@ -1,7 +1,7 @@
 Package: RollingWindow
 Type: Package
 Title: Calculates single-pass rolling and expanding window statistics
-Version: 0.1
+Version: 0.2
 Date: 2015-11-04
 Author: Andrew Uhl
 Maintainer: Andrew Uhl <auhl.code@gmail.com>
@@ -10,7 +10,7 @@ Description: Efficiently calculates rolling window and expanding window
     statistics using single-pass algorithms. Current functions include: beta,
     compounding, covariance, correlation, kurtosis, mean, mean absolute error, mean
     of squares, mean squared error, median, min, max, product, root mean squared
-    error, skewness, standard deviation, sum, sum product, sum of squares, sum of
+    error, sharpe ratio, skewness, standard deviation, sum, sum product, sum of squares, sum of
     squared errors, variance, and z score.
 License: MIT + file LICENSE
 Imports:

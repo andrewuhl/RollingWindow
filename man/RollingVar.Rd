@@ -4,7 +4,7 @@
 \alias{RollingVar}
 \title{Calculates the variance over a rolling window}
 \usage{
-RollingVar(x, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
+RollingVar(x, window, expanding = FALSE, na_method = "none", pop = FALSE)
 }
 \arguments{
 \item{x}{A vector, matrix, list or other object coercible to a matrix}
@@ -14,7 +14,7 @@ RollingVar(x, window, expanding = FALSE, na_rm = FALSE, pop = FALSE)
 \item{expanding}{TRUE to calculate an expanding window instead of a rolling window; if TRUE, window
 determines the starting number of observations used to calculate the statistic}
 
-\item{na_rm}{TRUE to handle NAs (see notes on NA handling)}
+\item{na_method}{One of "none" (default), "ignore" or "window" (see notes on NA handling)}
 
 \item{pop}{TRUE to calculate population (n) statistic, FALSE to calculate sample (n-1) statistic}
 }

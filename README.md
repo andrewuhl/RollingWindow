@@ -2,9 +2,9 @@
 
 ## Intro
 
-The main purpose of this package is to calculate rolling window statistics **fast**. It is aimed at any users who need to calculate rolling statistics
+The purpose of this package is to calculate rolling window and expanding window statistics **fast**. It is aimed at any users who need to calculate rolling statistics
 on large data sets, and should be particularly useful for the types of
-analysis done in the field of quantitative finance, even though the functions implemented are very general.
+analysis done in the field of quantitative finance, even though the functions implemented are primarily general-purpose.
 
 ## Installing in [R]
 
@@ -17,7 +17,7 @@ install_github("andrewuhl/RollingWindow")
 
 ## Rolling Window Statistics
 
-This package implements functions which efficiently calculate rolling window statistics in linear time using **single-pass** algorithms. Statistics implemented include:
+This package implements functions which efficiently calculate rolling window statistics using mostly **single-pass** algorithms. Statistics implemented include:
 
 * beta
 * compounding
@@ -33,6 +33,7 @@ This package implements functions which efficiently calculate rolling window sta
 * max
 * product
 * root mean squared error
+* sharpe ratio
 * skewness
 * standard deviation
 * sum
@@ -42,7 +43,7 @@ This package implements functions which efficiently calculate rolling window sta
 * variance
 * z score.
 
-_Note_: median is an exception as it is not calculated as a single pass algorithm, although it is still calculated quickly in O(n log window) using efficient algorithms.
+_Note_: median and min/max are exceptions as they are not calculated as a single pass algorithm, although they are still calculated quickly in O(n log window) using efficient algorithms.
 
 Calling functions on rolling windows calculated within loops in [R] can be quite slow, even when proper attempts are made to vectorize operations within the loop. Due to performance issues, several other [R] packages implement commonly used
 rolling window functions -- e.g. rolling mean or rolling standard deviation -- using the languages C, Fortran or C++. Both in pure [R] and in compiled language [R] packages, the implementation is usually the naive algorithm; each time a moving window moves forward by one increment, the function is recalulated over all values in the current window.
@@ -252,3 +253,478 @@ Unit: microseconds
       Var  410.086  415.107  457.9157  424.5965  487.923   600.642    10
    Zscore  590.037  596.305  632.3327  605.2265  623.487   841.082    10
 ```
+
+## NA Handling
+This package provides support for handling NA's in several ways.
+
+First, the function ```NaSub``` can substitute NA's in a vector by either 
+carrying the last non-NA observation forward (similar to the function
+```zoo::na.locf```) subject to a maximum gap size between non-NA observations, 
+or it can replace NA's with a user-specified replacement value.
+
+### Usage of ```NaSub```
+```R
+# generate some data with NA's
+set.seed(10)
+x <- matrix(rnorm(40), nrow = 20)
+x[c(2, 5, 7, 9, 14:16), 1] = NA
+x[c(1, 2, 15:18), 2] = NA
+> print(x)
+             [,1]        [,2]
+ [1,]  0.01874617          NA
+ [2,]          NA          NA
+ [3,] -1.37133055 -0.67486594
+ [4,] -0.59916772 -2.11906119
+ [5,]          NA -1.26519802
+ [6,]  0.38979430 -0.37366156
+ [7,]          NA -0.68755543
+ [8,] -0.36367602 -0.87215883
+ [9,]          NA -0.10176101
+[10,] -0.25647839 -0.25378053
+[11,]  1.10177950 -1.85374045
+[12,]  0.75578151 -0.07794607
+[13,] -0.23823356  0.96856634
+[14,]          NA  0.18492596
+[15,]          NA          NA
+[16,]          NA          NA
+[17,] -0.95494386          NA
+[18,] -0.19515038          NA
+[19,]  0.92552126 -0.32454401
+[20,]  0.48297852 -0.65156299
+
+# replace NA by carrying forward last non-NA observation
+y = NaSub(x, last_obs = TRUE, maxgap = 3)
+> print(y)
+             [,1]        [,2]
+ [1,]  0.01874617          NA
+ [2,]  0.01874617          NA
+ [3,] -1.37133055 -0.67486594
+ [4,] -0.59916772 -2.11906119
+ [5,] -0.59916772 -1.26519802
+ [6,]  0.38979430 -0.37366156
+ [7,]  0.38979430 -0.68755543
+ [8,] -0.36367602 -0.87215883
+ [9,] -0.36367602 -0.10176101
+[10,] -0.25647839 -0.25378053
+[11,]  1.10177950 -1.85374045
+[12,]  0.75578151 -0.07794607
+[13,] -0.23823356  0.96856634
+[14,] -0.23823356  0.18492596
+[15,] -0.23823356          NA
+[16,] -0.23823356          NA
+[17,] -0.95494386          NA
+[18,] -0.19515038          NA
+[19,]  0.92552126 -0.32454401
+[20,]  0.48297852 -0.65156299
+
+```
+
+In the above example, the first column in ```y``` has had all of
+its NA's replaced by the last non-NA observations. However, the 
+second column in ```x``` still has NA's remaining in ```y```. For elements in ```x[1:2, 2]```,
+this is because the first observation ```x[1, 2]``` was ```NA```, so there
+was no non-NA observation to carry forward. For elements in
+```x[15:18, 2]```, the NA's were not replaced because the ```maxgap``` argument
+was set to 3. This argument limits the maximum gap between non-NA
+observations that will be replaced by carrying forward the last non-NA
+observation. Since there was a sequence of 4 consecutive NA's, the
+NA's were not replaced.
+
+We can call ```NaSub``` with argument ```last_obs = FALSE```. In 
+this case, a user-defined value with replace all NA's in lieu
+of carrying forward the last non-NA observation, but again subject
+to the user-defined ```maxgap``` restriction.
+
+```R
+y = NaSub(x, repl = -999, last_obs = FALSE, maxgap = 3)
+> print(y)
+               [,1]        [,2]
+ [1,]    0.01874617          NA
+ [2,] -999.00000000          NA
+ [3,]   -1.37133055 -0.67486594
+ [4,]   -0.59916772 -2.11906119
+ [5,] -999.00000000 -1.26519802
+ [6,]    0.38979430 -0.37366156
+ [7,] -999.00000000 -0.68755543
+ [8,]   -0.36367602 -0.87215883
+ [9,] -999.00000000 -0.10176101
+[10,]   -0.25647839 -0.25378053
+[11,]    1.10177950 -1.85374045
+[12,]    0.75578151 -0.07794607
+[13,]   -0.23823356  0.96856634
+[14,] -999.00000000  0.18492596
+[15,] -999.00000000          NA
+[16,] -999.00000000          NA
+[17,]   -0.95494386          NA
+[18,]   -0.19515038          NA
+[19,]    0.92552126 -0.32454401
+[20,]    0.48297852 -0.65156299
+```
+
+The ```repl``` argument set the replacement value to ```-999``` ( a number
+arbitrarily chosen here for the sake of illustration), and similar
+to the first example, column 1 in ```x``` had its NA's replaced by
+```-999```, whereas column 2 in ```x``` did not have any NA's replaced due to
+the ```maxgap``` argument being set to 3.
+
+If we instead wanted to replace all NA's irrespective of the 
+number of consecutive NA's, we need only set the ```maxgap``` to
+a larger size. By default, ```maxgap = -1```, which is a special
+case indicating that no maximum gap size will be enforced.
+
+```R
+y = NaSub(x, repl = -999, last_obs = FALSE, maxgap = -1)
+> print(y)
+               [,1]          [,2]
+ [1,]    0.01874617            NA
+ [2,] -999.00000000            NA
+ [3,]   -1.37133055   -0.67486594
+ [4,]   -0.59916772   -2.11906119
+ [5,] -999.00000000   -1.26519802
+ [6,]    0.38979430   -0.37366156
+ [7,] -999.00000000   -0.68755543
+ [8,]   -0.36367602   -0.87215883
+ [9,] -999.00000000   -0.10176101
+[10,]   -0.25647839   -0.25378053
+[11,]    1.10177950   -1.85374045
+[12,]    0.75578151   -0.07794607
+[13,]   -0.23823356    0.96856634
+[14,] -999.00000000    0.18492596
+[15,] -999.00000000 -999.00000000
+[16,] -999.00000000 -999.00000000
+[17,]   -0.95494386 -999.00000000
+[18,]   -0.19515038 -999.00000000
+[19,]    0.92552126   -0.32454401
+[20,]    0.48297852   -0.65156299
+```
+
+In this case, all NA's have been replaced except the two leading
+NA's in column 2 of ```y```. If we also want to replace leading NA's with
+a replacment value, we can set ```leading = TRUE``` and provide
+a value for ```repl```. Supposing that we would like leading NA's
+to be set to ```-Inf```, we can call ```NaSub``` as follows:
+
+```R
+y = NaSub(x, repl = -Inf, last_obs = TRUE, maxgap = -1, leading = TRUE)
+             [,1]        [,2]
+ [1,]  0.01874617        -Inf
+ [2,]  0.01874617        -Inf
+ [3,] -1.37133055 -0.67486594
+ [4,] -0.59916772 -2.11906119
+ [5,] -0.59916772 -1.26519802
+ [6,]  0.38979430 -0.37366156
+ [7,]  0.38979430 -0.68755543
+ [8,] -0.36367602 -0.87215883
+ [9,] -0.36367602 -0.10176101
+[10,] -0.25647839 -0.25378053
+[11,]  1.10177950 -1.85374045
+[12,]  0.75578151 -0.07794607
+[13,] -0.23823356  0.96856634
+[14,] -0.23823356  0.18492596
+[15,] -0.23823356  0.18492596
+[16,] -0.23823356  0.18492596
+[17,] -0.95494386  0.18492596
+[18,] -0.19515038  0.18492596
+[19,]  0.92552126 -0.32454401
+[20,]  0.48297852 -0.65156299
+```
+In this case, all last non-NA observations were carried forward since
+```last_obs = TRUE```, and ```maxgap = -1```. Because ```leading = TRUE```, the leading
+values were assigned the ```-Inf``` value set by ```repl = -Inf```. 
+
+### Usage of argument ```na_method``` in ```Rolling*``` functions
+```NaSub``` helps replace NA's so that rolling window functions don't have 
+to worry about them. So, if ```NaSub``` is able to replace NA's in a helpful way
+for your analysis, it makes sense to call ```NaSub``` to transform 
+your dataset before calling rolling window functions. 
+Nonetheless, the second way to handle NA's is to use the ```na_method``` argument when calling 
+```Rolling*``` functions. 
+
+NA handling provided through the ```na_method``` **will not replace NA values**, it only provides
+methods of dealing with NA's in calculations (e.g. by ignoring them).
+
+#### na_method = "none"
+In this case, no NA handling is performed. If you know that your
+data contains no NA's, then ```na_method = "none"``` will be the 
+most performant option since it avoids the extra computational cost
+and memory allocation to handle NA's.
+
+#### na_method = "ignore"
+In this case, NA's are simply ignored. For each column of data in 
+dataset ```x```, all NA's are first dropped, then rolling window
+statistics are calculated, then a column with the same number of 
+observations as the original column containing NA's is written to
+with the rolling window statistics, as well as the NA's where they
+originally appeared in ```x```. 
+
+#### na_method = "window"
+In this case, whenever an NA is first encountered in a vector, a
+rolling window statistic will not be calculated again until at least N 
+number of consecutive non-NA observations appear, where N is the 
+user-specified window length of the rolling window statistic.  
+
+#### Examples of na_method types
+The above ```na_method``` types are best illustrated through 
+examples. Let's use the rolling window function ```RollingSum```
+to illustrate what will be the result of each ```na_method``` type.
+
+```R
+x <- matrix(c(1:20, 1:20), ncol = 2)
+x <- matrix(c(rep(1, 20), rep(1, 20)), ncol = 2)
+
+> print(x)
+      [,1] [,2]
+ [1,]    1    1
+ [2,]    1    1
+ [3,]    1    1
+ [4,]    1    1
+ [5,]    1    1
+ [6,]    1    1
+ [7,]    1    1
+ [8,]    1    1
+ [9,]    1    1
+[10,]    1    1
+[11,]    1    1
+[12,]    1    1
+[13,]    1    1
+[14,]    1    1
+[15,]    1    1
+[16,]    1    1
+[17,]    1    1
+[18,]    1    1
+[19,]    1    1
+[20,]    1    1
+
+> RollingSum(x, window = 5)
+      [,1] [,2]
+ [1,]   NA   NA
+ [2,]   NA   NA
+ [3,]   NA   NA
+ [4,]   NA   NA
+ [5,]    5    5
+ [6,]    5    5
+ [7,]    5    5
+ [8,]    5    5
+ [9,]    5    5
+[10,]    5    5
+[11,]    5    5
+[12,]    5    5
+[13,]    5    5
+[14,]    5    5
+[15,]    5    5
+[16,]    5    5
+[17,]    5    5
+[18,]    5    5
+[19,]    5    5
+[20,]    5    5
+```
+As expected, ```RollingSum``` outputs 5 for each element in ```x```
+since ```window = 5```. Also, notice that the first 4 (or ```window - 1```)
+rows in the result matrix contain NA's. This is by design since we 
+only have the required number of observations to calculate the sum 
+at row 5 (our specified window length). Suppose now that we add some NA's to 
+the two columns in ```x``` and then called ```RollingSum``` once more.
+
+```R
+x[11, 1] = NA
+x[1, 2] = NA
+			
+> print(x)
+      [,1] [,2]
+ [1,]    1   NA
+ [2,]    1    1
+ [3,]    1    1
+ [4,]    1    1
+ [5,]    1    1
+ [6,]    1    1
+ [7,]    1    1
+ [8,]    1    1
+ [9,]    1    1
+[10,]    1    1
+[11,]   NA    1
+[12,]    1    1
+[13,]    1    1
+[14,]    1    1
+[15,]    1    1
+[16,]    1    1
+[17,]    1    1
+[18,]    1    1
+[19,]    1    1
+[20,]    1    1
+
+> RollingSum(x, window = 5, method = "none")
+      [,1] [,2]
+ [1,]   NA   NA
+ [2,]   NA   NA
+ [3,]   NA   NA
+ [4,]   NA   NA
+ [5,]    5   NA
+ [6,]    5   NA
+ [7,]    5   NA
+ [8,]    5   NA
+ [9,]    5   NA
+[10,]    5   NA
+[11,]   NA   NA
+[12,]   NA   NA
+[13,]   NA   NA
+[14,]   NA   NA
+[15,]   NA   NA
+[16,]   NA   NA
+[17,]   NA   NA
+[18,]   NA   NA
+[19,]   NA   NA
+[20,]   NA   NA
+```
+
+In the first column of output, from the first occurence of NA 
+in ```x[, 1]``` at row 11, all subsequent values in the output are NA's. 
+This happens because ```na_method = "none"```. Using this method, in the internal C++ calculations each time a 
+window is moved forward by one, we add a new value ```x[i, 1]``` to a ```sum``` 
+variable at the ```i```th row, then subtract the outgoing value ```x[i - window + 1, 1]``` (i.e. the value that just
+left the rolling window ) from the ```sum``` variable to calculate 
+the rolling sum for the current observation. Since we've added the new value of NA at 
+```x[11, 1]``` to ```sum```, it will from that index forward be equal 
+to NA, which is exactly the result we would expect if we implemented a rolling
+sum function in R using the same single pass summation algorithm 
+described above that doesn't account for NA's.
+
+At this point, we have two ways of avoiding NA's propogating down
+the columns of the output. We can set ```na_method = "window"``` or
+```na_method = "ignore"```. Let's try both types and see what 
+happens.
+
+```R
+> RollingSum(x, window = 5, na_method = "window")
+      [,1] [,2]
+ [1,]   NA   NA
+ [2,]   NA   NA
+ [3,]   NA   NA
+ [4,]   NA   NA
+ [5,]    5   NA
+ [6,]    5    5
+ [7,]    5    5
+ [8,]    5    5
+ [9,]    5    5
+[10,]    5    5
+[11,]   NA    5
+[12,]   NA    5
+[13,]   NA    5
+[14,]   NA    5
+[15,]   NA    5
+[16,]    5    5
+[17,]    5    5
+[18,]    5    5
+[19,]    5    5
+[20,]    5    5
+```
+
+With ```na_method = "window"```, we get more intuitive results. Once the
+first NA occurs in ```x[11, 1]```, the next statistic isn't outputted
+until 5 consecutive non-NA values appear (5 being the length of
+the window we specified), which first occurs at ```x[16, 1]```.
+
+However, we also have one more option, which is setting 
+```na_method = "ignore"```. Let's see what happens in this case.
+
+```R
+> RollingSum(x, window = 5, na_method = "ignore")
+     [,1] [,2]
+ [1,]   NA   NA
+ [2,]   NA   NA
+ [3,]   NA   NA
+ [4,]   NA   NA
+ [5,]    5   NA
+ [6,]    5    5
+ [7,]    5    5
+ [8,]    5    5
+ [9,]    5    5
+[10,]    5    5
+[11,]   NA    5
+[12,]    5    5
+[13,]    5    5
+[14,]    5    5
+[15,]    5    5
+[16,]    5    5
+[17,]    5    5
+[18,]    5    5
+[19,]    5    5
+[20,]    5    5
+```
+Here, NA's only appear where they occur in the original dataset ```x```.
+This is because ```na_method = "ignore"``` completely ignores NA's, 
+that is, NA's are simply skipped when moving the window forward. The 
+sums will still be calculated using exactly 5 data points (the size
+of the window). If we look at the output at ```[12, 1]```, the sum
+was calculated as ```x[12, 1] + x[10, 1]  + x[9, 1] + x[8, 1] + x[7, 1]```.
+Notice that ```x[11, 1]``` was not included, but 5 observations were
+included, thus, the window size is always respected. This can be seen
+more clearly if we change the values of x to an increasing sequence
+of integers.
+
+```R
+x <- matrix(c(1:20, 1:20), ncol = 2)
+x[11, 1] = NA
+x[1, 2] = NA
+
+> print(x)
+      [,1] [,2]
+ [1,]    1   NA
+ [2,]    2    2
+ [3,]    3    3
+ [4,]    4    4
+ [5,]    5    5
+ [6,]    6    6
+ [7,]    7    7
+ [8,]    8    8
+ [9,]    9    9
+[10,]   10   10
+[11,]   NA   11
+[12,]   12   12
+[13,]   13   13
+[14,]   14   14
+[15,]   15   15
+[16,]   16   16
+[17,]   17   17
+[18,]   18   18
+[19,]   19   19
+[20,]   20   20
+
+> RollingSum(x, window = 5, na_method = "ignore")
+      [,1] [,2]
+ [1,]   NA   NA
+ [2,]   NA   NA
+ [3,]   NA   NA
+ [4,]   NA   NA
+ [5,]   15   NA
+ [6,]   20   20
+ [7,]   25   25
+ [8,]   30   30
+ [9,]   35   35
+[10,]   40   40
+[11,]   NA   45
+[12,]   46   50
+[13,]   52   55
+[14,]   58   60
+[15,]   64   65
+[16,]   70   70
+[17,]   75   75
+[18,]   80   80
+[19,]   85   85
+[20,]   90   90
+```
+
+Until ```[11, 1]```, the output increased by 5 at each row, but
+from ```[12:15, 1]``` -- since the sequence is disrupted (i.e. NA is 
+skipped) -- the sequence increases by 6 until there are 5 consecutive
+non-NA values, at which point the normal output sequence of 
+increasing by 5 occurs at ```[16, 1]```.
+
+#### Expanding window NA handling
+
+Until now, we have only discussed the **rolling window** case
+ (```expanding = FALSE```) and not the **expanding window** case 
+ (```expanding = TRUE```). For the expanding case, if ```na_method = "none"```,
+ there is no support for NA handling similar to the rolling window case.
+ For the cases ```na_method = "ignore"``` and ```na_method = "window"```,
+ both will use the same logic as ```na_method = "ignore"``` as in 
+ the rolling window case.

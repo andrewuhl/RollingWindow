@@ -5,7 +5,7 @@
 Single pass rolling window calculations
 }
 \description{
-This package implements functions which efficiently calculate rolling window statistics in linear time using single-pass algorithms. Current functions include: beta, compounding, covariance, correlation, kurtosis, mean, mean absolute error, mean of squares, mean squared error, median, min, max, product, root mean squared error, skewness, standard deviation, sum, sum product, sum of squares, sum of squared errors, variance, and z score. Note: median is an exception as it is not calculated as a single pass algorithm, although it is still calculated quickly in O(n log window) using efficient algorithms.
+This package implements functions which efficiently calculate rolling window statistics using single-pass algorithms. Current functions include: beta, compounding, covariance, correlation, kurtosis, mean, mean absolute error, mean of squares, mean squared error, median, min, max, product, root mean squared error, sharpe ratio, skewness, standard deviation, sum, sum product, sum of squares, sum of squared errors, variance, and z score. Note: median is an exception as it is not calculated as a single pass algorithm, although it is still calculated quickly in O(n log window) using efficient algorithms.
     
 Calling functions on rolling windows calculated within loops in [R] can be quite slow, even when proper attempts are made to vectorize operations within the loop. Due to performance issues, several other [R] packages implement commonly used 
 rolling window functions -- e.g. rolling mean or rolling standard deviation -- using the languages C, Fortran or C++. Both in pure [R] and in compiled language [R] packages, the implementation is usually the naive algorithm; each time a moving window moves forward by one increment, the function is recalulated over all values in the current window. 
@@ -62,44 +62,8 @@ sumprod <- RollingSumprod(x, y, window = w)
 }
 
 \section{NA Handling}{
-For all functions which provide rolling/expanding window statistics in this package, an argument \code{na_rm} can be set to \code{TRUE} to handle \code{NA}'s. 
-For functions that accept a single data object \code{x},
- \code{NA}s are handled as follows. For each vector \code{v} in \code{x}:
-
- 1. For all elements \code{i} in \code{v}, if \code{i < window}, then the window statistic for {i} is set to \code{NA}. 
- This is true whether or not the \code{na_rm} argument is set to \code{TRUE}. 
- 
- 2. For the \emph{rolling} window case, a window statistic is calculated if all elements in the current window are not \code{NA}'s, 
- otherwise the window statistic is set to \code{NA}.
- 
- 3. For the \emph{expanding} window case, \code{NA}s are ignored.
- 
-Similarly, for functions accepting two vectors \code{x} and \code{y}:
- 
- 1. For all elements \code{i} in \code{x} (or equivalently \code{y}, since they are required to be equal-length vectors), 
- if \code{i < window}, then the window statistic for \code{i} is set to \code{NA}. 
- This is true whether or not the \code{na_rm} argument is set to \code{TRUE}. 
- 
- 2. For the \emph{rolling} window case, a window statistic is calculated if all pairwise elements \code{x_i} and \code{y_i} in the 
- current window are not \code{NA}s, otherwise the window statistic is set to \code{NA}.
- 
- 3. For the \emph{expanding} window case, \code{NA}'s are ignored if either \code{x_i} or \code{y_i} is an \code{NA}.
- 
- It is important to understand what will happen when a rolling statistic is calculated using data that contains \code{NA}s, 
- but when the \code{na_rm} argument is set to \code{FALSE}.
- In this case, for functions like \code{RollingMean}, once the first instance of an \code{NA} is reached, 
- all subsequent elements in the output vector will be \code{NA}. This is because
- most window statistics will include an \code{NA} in an arithmetic or multiplicative operation which will result in an \code{NA}
- for the current window's calculation. However, in other functions like 
- \code{RollingMedian} or \code{RollingMin}, it is not the case that all results including/after the first occurence of an \code{NA} will result in an \code{NA}. 
- This is because arithmetic/multiplicative 
- operations are not performed; instead, comparisons are made between pairs of values which may or may not include an \code{NA}, 
- and any \code{NA}'s resulting from these comparions do not necessarily
- propogate down the result vector.
- 
- In short, one should take great care to understand the behavior of \code{NA} handling, and when appropriate, set the \code{na_rm} argument to \code{TRUE}. 
- If the aforementioned \code{NA} handling behavior is not suitable for your application, you might also find the function \code{NaSub} to be useful. \code{NaSub}
- can replace \code{NA}s with either the last non-\code{NA} observation, or a specified (constant) replacement value.
+For all functions which provide rolling/expanding window statistics in this package, an argument \code{na_method} can be set to one of \code{"none"}, \code{"ignore"} or \code{"window"} to handle \code{NA}'s. Please
+see vignette on \code{NA} handling for more details.
 }
 
 \section{Functions arguments x and y}{
